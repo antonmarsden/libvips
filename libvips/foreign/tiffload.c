@@ -77,6 +77,8 @@ typedef struct _VipsForeignLoadTiff {
 	 */
 	gboolean autorotate;
 
+	CustomTiffTags *customTags;
+
 } VipsForeignLoadTiff;
 
 typedef VipsForeignLoadClass VipsForeignLoadTiffClass;
@@ -136,7 +138,7 @@ vips_foreign_load_tiff_header(VipsForeignLoad *load)
 	VipsForeignLoadTiff *tiff = (VipsForeignLoadTiff *) load;
 
 	if (vips__tiff_read_header_source(tiff->source, load->out,
-			tiff->page, tiff->n, tiff->autorotate, tiff->subifd,
+			tiff->page, tiff->n, tiff->autorotate, tiff->subifd, tiff->customTags,
 			load->fail_on))
 		return -1;
 
@@ -149,7 +151,7 @@ vips_foreign_load_tiff_load(VipsForeignLoad *load)
 	VipsForeignLoadTiff *tiff = (VipsForeignLoadTiff *) load;
 
 	if (vips__tiff_read_source(tiff->source, load->real,
-			tiff->page, tiff->n, tiff->autorotate, tiff->subifd,
+			tiff->page, tiff->n, tiff->autorotate, tiff->subifd, tiff->customTags,
 			load->fail_on))
 		return -1;
 
@@ -215,6 +217,12 @@ vips_foreign_load_tiff_class_init(VipsForeignLoadTiffClass *class)
 		VIPS_ARGUMENT_OPTIONAL_INPUT,
 		G_STRUCT_OFFSET(VipsForeignLoadTiff, subifd),
 		-1, 100000, -1);
+
+	VIPS_ARG_POINTER(class, "customTags", 23,
+		_("customTags"),
+		_("Custom TIFF tags"),
+		VIPS_ARGUMENT_OPTIONAL_INPUT,
+		G_STRUCT_OFFSET(VipsForeignLoadTiff, customTags));
 }
 
 static void
@@ -223,6 +231,7 @@ vips_foreign_load_tiff_init(VipsForeignLoadTiff *tiff)
 	tiff->page = 0;
 	tiff->n = 1;
 	tiff->subifd = -1;
+	tiff->customTags = NULL;
 }
 
 typedef struct _VipsForeignLoadTiffSource {
@@ -518,6 +527,8 @@ vips_tiffload(const char *filename, VipsImage **out, ...)
 {
 	va_list ap;
 	int result;
+	printf("tiffload!\n");
+
 
 	va_start(ap, out);
 	result = vips_call_split("tiffload", ap, filename, out);

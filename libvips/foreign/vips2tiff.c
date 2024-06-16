@@ -394,6 +394,8 @@ struct _Wtiff {
 	/* Lock thread calls into libtiff with this.
 	 */
 	GMutex *lock;
+
+	CustomTiffTags *customTags;
 };
 
 /* Write an ICC Profile from a file into the JPEG stream.
@@ -2394,7 +2396,7 @@ wtiff_gather(Wtiff *wtiff)
 			if (!(source = vips_source_new_from_target(layer->target)))
 				return -1;
 
-			if (!(in = vips__tiff_openin_source(source))) {
+			if (!(in = vips__tiff_openin_source(source, wtiff->customTags))) {
 				VIPS_UNREF(source);
 				return -1;
 			}

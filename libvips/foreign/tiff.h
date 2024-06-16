@@ -32,12 +32,13 @@
 #define VIPS_TIFF_H
 
 #include <tiffio.h>
+#include "pforeign.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /*__cplusplus*/
 
-TIFF *vips__tiff_openin_source(VipsSource *source);
+TIFF *vips__tiff_openin_source(VipsSource *source, CustomTiffTags *customTags);
 
 TIFF *vips__tiff_openout(const char *path, gboolean bigtiff);
 TIFF *vips__tiff_openout_target(VipsTarget *target, gboolean bigtiff);

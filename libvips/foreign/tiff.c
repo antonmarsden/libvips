@@ -58,6 +58,7 @@
 #include <tiffio.h>
 
 #include "tiff.h"
+#include "pforeign.h"
 
 /* Handle TIFF errors here. Shared with vips2tiff.c. These can be called from
  * more than one thread.
@@ -156,8 +157,22 @@ openin_source_unmap(thandle_t st, tdata_t start, toff_t len)
 	return;
 }
 
+static TIFFExtendProc _prevExtendProc = NULL;
+static CustomTiffTags *_customTags = NULL;
+//int (*getFunc())(int, int) { … }
+
+
+static void initCustomTags(TIFF *tiff) {
+	if (_customTags != NULL) {
+		printf("Calling TIFFMergeFieldInfo, len = %d\n", _customTags->len);
+		TIFFMergeFieldInfo(tiff, _customTags->tags, _customTags->len);
+	}
+	TIFFSetTagExtender(_prevExtendProc);
+	_prevExtendProc = NULL;
+}
+
 TIFF *
-vips__tiff_openin_source(VipsSource *source)
+vips__tiff_openin_source(VipsSource *source, CustomTiffTags *customTags)
 {
 	TIFF *tiff;
 
@@ -167,6 +182,15 @@ vips__tiff_openin_source(VipsSource *source)
 
 	if (vips_source_rewind(source))
 		return NULL;
+
+
+	if (customTags != NULL) {
+		printf("customTags is defined, setting up extender\n");
+		_customTags = customTags;
+		_prevExtendProc = TIFFSetTagExtender(initCustomTags);
+	} else {
+		printf("customTags is NULL!!!\n");
+	}
 
 	/* Disable memory mapped input -- it chews up VM and the performance
 	 * gain is very small.

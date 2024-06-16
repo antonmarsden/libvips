@@ -383,6 +383,7 @@ typedef struct _Rtiff {
 	int n;
 	gboolean autorotate;
 	int subifd;
+	CustomTiffTags *customTags;
 	VipsFailOn fail_on;
 
 	/* We decompress some compression types in parallel, so we need to
@@ -616,7 +617,7 @@ rtiff_minimise_cb(VipsImage *image, Rtiff *rtiff)
 
 static Rtiff *
 rtiff_new(VipsSource *source, VipsImage *out,
-	int page, int n, gboolean autorotate, int subifd, VipsFailOn fail_on)
+	int page, int n, gboolean autorotate, int subifd, CustomTiffTags *customTags, VipsFailOn fail_on)
 {
 	Rtiff *rtiff;
 
@@ -630,6 +631,7 @@ rtiff_new(VipsSource *source, VipsImage *out,
 	rtiff->n = n;
 	rtiff->autorotate = autorotate;
 	rtiff->subifd = subifd;
+	rtiff->customTags = customTags;
 	rtiff->fail_on = fail_on;
 	g_rec_mutex_init(&rtiff->lock);
 	rtiff->tiff = NULL;
@@ -664,7 +666,7 @@ rtiff_new(VipsSource *source, VipsImage *out,
 		return NULL;
 	}
 
-	if (!(rtiff->tiff = vips__tiff_openin_source(source)))
+	if (!(rtiff->tiff = vips__tiff_openin_source(source, customTags)))
 		return NULL;
 
 	return rtiff;
@@ -1876,6 +1878,15 @@ rtiff_set_header(Rtiff *rtiff, VipsImage *out)
 			TIFFTAG_PHOTOSHOP, &data_len, &data))
 		vips_image_set_blob_copy(out,
 			VIPS_META_PHOTOSHOP_NAME, data, data_len);
+
+	if (rtiff->customTags != NULL) {
+		printf("custom tag count: %d\n", rtiff->customTags->len);
+		const TIFFFieldInfo *tag = rtiff->customTags->tags;
+		for (size_t i = 0; i < rtiff->customTags->len; i++) {
+			printf("%d: %s\n", tag->field_tag, tag->field_name);
+			tag++;
+		}
+	}
 
 	if (rtiff->header.image_description)
 		vips_image_set_string(out, VIPS_META_IMAGEDESCRIPTION,
@@ -3405,7 +3416,7 @@ vips__testtiff_source(VipsSource *source, TiffPropertyFn fn)
 
 	vips__tiff_init();
 
-	if (!(tif = vips__tiff_openin_source(source))) {
+	if (!(tif = vips__tiff_openin_source(source, NULL))) {
 		vips_error_clear();
 		return FALSE;
 	}
@@ -3431,14 +3442,14 @@ vips__istifftiled_source(VipsSource *source)
 
 int
 vips__tiff_read_header_source(VipsSource *source, VipsImage *out,
-	int page, int n, gboolean autorotate, int subifd, VipsFailOn fail_on)
+	int page, int n, gboolean autorotate, int subifd, CustomTiffTags *customTags, VipsFailOn fail_on)
 {
 	Rtiff *rtiff;
 
 	vips__tiff_init();
 
 	if (!(rtiff = rtiff_new(source, out,
-			  page, n, autorotate, subifd, fail_on)) ||
+			  page, n, autorotate, subifd, customTags, fail_on)) ||
 		rtiff_header_read_all(rtiff))
 		return -1;
 
@@ -3461,7 +3472,7 @@ vips__tiff_read_header_source(VipsSource *source, VipsImage *out,
 
 int
 vips__tiff_read_source(VipsSource *source, VipsImage *out,
-	int page, int n, gboolean autorotate, int subifd, VipsFailOn fail_on)
+	int page, int n, gboolean autorotate, int subifd, CustomTiffTags *customTags, VipsFailOn fail_on)
 {
 	Rtiff *rtiff;
 
@@ -3472,7 +3483,7 @@ vips__tiff_read_source(VipsSource *source, VipsImage *out,
 	vips__tiff_init();
 
 	if (!(rtiff = rtiff_new(source, out,
-			  page, n, autorotate, subifd, fail_on)) ||
+			  page, n, autorotate, subifd, customTags, fail_on)) ||
 		rtiff_header_read_all(rtiff))
 		return -1;
 
