@@ -113,7 +113,7 @@ typedef struct _VipsForeignSaveTiff {
 	VipsForeignDzDepth depth;
 	gboolean subifd;
 	gboolean premultiply;
-
+	CustomTiffTags *customTags;
 } VipsForeignSaveTiff;
 
 typedef VipsForeignSaveClass VipsForeignSaveTiffClass;
@@ -179,6 +179,14 @@ vips_foreign_save_tiff_build(VipsObject *object)
 	if (!vips_object_argument_isset(object, "yres"))
 		tiff->yres = save->ready->Yres;
 
+	tiff->customTags = save->ready->customTiffTags;
+
+	if (tiff->customTags != NULL) {
+		printf("save_tiff_build customTags not null");
+	} else {
+		printf("save_tiff_build customTags is null");
+	}
+
 	/* We default to pixels/cm.
 	 */
 	tiff->xres *= 10.0;
@@ -223,7 +231,9 @@ vips_foreign_save_tiff_build(VipsObject *object)
 			tiff->depth,
 			tiff->subifd,
 			tiff->premultiply,
-			save->page_height))
+			save->page_height,
+			tiff->customTags
+			))
 		return -1;
 
 	if (vips_target_end(tiff->target))
@@ -408,6 +418,12 @@ vips_foreign_save_tiff_class_init(VipsForeignSaveTiffClass *class)
 		VIPS_ARGUMENT_OPTIONAL_INPUT | VIPS_ARGUMENT_DEPRECATED,
 		G_STRUCT_OFFSET(VipsForeignSaveTiff, squash),
 		FALSE);
+
+	VIPS_ARG_POINTER(class, "customTags", 30,
+		_("customTags"),
+		_("Custom TIFF tags"),
+		VIPS_ARGUMENT_OPTIONAL_INPUT,
+		G_STRUCT_OFFSET(VipsForeignSaveTiff, customTags));
 }
 
 static void
@@ -426,6 +442,7 @@ vips_foreign_save_tiff_init(VipsForeignSaveTiff *tiff)
 	tiff->lossless = FALSE;
 	tiff->depth = VIPS_FOREIGN_DZ_DEPTH_ONETILE;
 	tiff->bitdepth = 0;
+	tiff->customTags = NULL;
 }
 
 typedef struct _VipsForeignSaveTiffTarget {

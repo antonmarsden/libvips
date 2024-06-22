@@ -46,6 +46,13 @@ int vips__foreign_update_metadata(VipsImage *in,
 
 void vips__tiff_init(void);
 
+struct _CustomTiffTags {
+	const TIFFFieldInfo *tags;
+	const int len;
+};
+
+typedef struct _CustomTiffTags CustomTiffTags;
+
 int vips__tiff_write_target(VipsImage *in, VipsTarget *target,
 	VipsForeignTiffCompression compression, int Q,
 	VipsForeignTiffPredictor predictor,
@@ -64,14 +71,8 @@ int vips__tiff_write_target(VipsImage *in, VipsTarget *target,
 	VipsForeignDzDepth depth,
 	gboolean subifd,
 	gboolean premultiply,
-	int page_height);
-
-struct _CustomTiffTags {
-	const TIFFFieldInfo *tags;
-	const int len;
-};
-
-typedef struct _CustomTiffTags CustomTiffTags;
+	int page_height,
+	CustomTiffTags *customTags);
 
 gboolean vips__istiff_source(VipsSource *source);
 gboolean vips__istifftiled_source(VipsSource *source);

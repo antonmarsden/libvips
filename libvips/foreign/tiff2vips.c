@@ -669,6 +669,8 @@ rtiff_new(VipsSource *source, VipsImage *out,
 	if (!(rtiff->tiff = vips__tiff_openin_source(source, customTags)))
 		return NULL;
 
+	out->customTiffTags = customTags;
+
 	return rtiff;
 }
 
@@ -1884,6 +1886,32 @@ rtiff_set_header(Rtiff *rtiff, VipsImage *out)
 		const TIFFFieldInfo *tag = rtiff->customTags->tags;
 		for (size_t i = 0; i < rtiff->customTags->len; i++) {
 			printf("%d: %s\n", tag->field_tag, tag->field_name);
+			switch (tag->field_type) {
+			case TIFF_SHORT:
+				printf("short\n");
+				if (TIFFGetField(rtiff->tiff, tag->field_tag, &data_len, &data)) {
+					vips_image_set_blob_copy(out, tag->field_name, data, data_len * 2);
+				}
+				break;
+			case TIFF_ASCII:
+				printf("ascii\n");
+				if (TIFFGetField(rtiff->tiff, tag->field_tag, &data_len, &data)) {
+					vips_image_set_blob_copy(out, tag->field_name, data, data_len);
+				}
+				break;
+			case TIFF_DOUBLE:
+				printf("double\n");
+				if (TIFFGetField(rtiff->tiff, tag->field_tag, &data_len, &data)) {
+					vips_image_set_blob_copy(out, tag->field_name, data, data_len * 8);
+				}
+				break;
+			default:
+				printf("unknown type: %d\n", tag->field_type);
+				break;
+			}
+//			if (TIFFGetField(rtiff->tiff, tag->field_tag, &data_len, &data)) {
+//				vips_image_set_blob_copy(out, tag->field_name, data, data_len);
+//			}
 			tag++;
 		}
 	}

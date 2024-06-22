@@ -1323,7 +1323,8 @@ wtiff_new(VipsImage *input, VipsTarget *target,
 	VipsForeignDzDepth depth,
 	gboolean subifd,
 	gboolean premultiply,
-	int page_height)
+	int page_height,
+	CustomTiffTags *customTags)
 {
 	Wtiff *wtiff;
 
@@ -1362,6 +1363,7 @@ wtiff_new(VipsImage *input, VipsTarget *target,
 	wtiff->n_pages = 1;
 	wtiff->image_height = input->Ysize;
 	wtiff->lock = vips_g_mutex_new();
+	wtiff->customTags = customTags;
 
 	/* Any pre-processing on the image.
 	 */
@@ -2593,7 +2595,8 @@ vips__tiff_write_target(VipsImage *input, VipsTarget *target,
 	VipsForeignDzDepth depth,
 	gboolean subifd,
 	gboolean premultiply,
-	int page_height)
+	int page_height,
+	CustomTiffTags *customTags)
 {
 	Wtiff *wtiff;
 
@@ -2604,7 +2607,7 @@ vips__tiff_write_target(VipsImage *input, VipsTarget *target,
 			  tile, tile_width, tile_height, pyramid, bitdepth,
 			  miniswhite, resunit, xres, yres, bigtiff, rgbjpeg,
 			  properties, region_shrink, level, lossless, depth,
-			  subifd, premultiply, page_height)))
+			  subifd, premultiply, page_height, customTags)))
 		return -1;
 
 	if (vips_sink_disc(wtiff->ready, wtiff_sink_disc_strip, wtiff)) {
