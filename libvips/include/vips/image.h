@@ -323,8 +323,6 @@ struct _VipsImage {
 	 */
 	gboolean delete_on_close;
 	char *delete_on_close_filename;
-
-	void* customTiffTags;
 };
 
 typedef struct _VipsImageClass {

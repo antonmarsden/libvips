@@ -669,8 +669,6 @@ rtiff_new(VipsSource *source, VipsImage *out,
 	if (!(rtiff->tiff = vips__tiff_openin_source(source, customTags)))
 		return NULL;
 
-	out->customTiffTags = customTags;
-
 	return rtiff;
 }
 
@@ -1882,6 +1880,7 @@ rtiff_set_header(Rtiff *rtiff, VipsImage *out)
 			VIPS_META_PHOTOSHOP_NAME, data, data_len);
 
 	if (rtiff->customTags != NULL) {
+		vips_image_set_blob_copy(out, VIPS_META_CUSTOM_TIFF_TAGS, rtiff->customTags, sizeof(CustomTiffTags));
 		printf("custom tag count: %d\n", rtiff->customTags->len);
 		const TIFFFieldInfo *tag = rtiff->customTags->tags;
 		for (size_t i = 0; i < rtiff->customTags->len; i++) {

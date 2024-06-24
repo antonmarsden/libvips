@@ -149,6 +149,13 @@ vips_foreign_save_tiff_build(VipsObject *object)
 
 	const char *p;
 
+	if (tiff->customTags != NULL) {
+		printf("save_tiff_build customTags is defined");
+	} else {
+		printf("save_tiff_build customTags is null");
+	}
+
+
 	/* If we are saving jpeg-in-tiff, we need a different convert_saveable
 	 * path. The regular tiff one will let through things like float and
 	 * 16-bit and alpha for example, which will make the jpeg saver choke.
@@ -178,14 +185,6 @@ vips_foreign_save_tiff_build(VipsObject *object)
 		tiff->xres = save->ready->Xres;
 	if (!vips_object_argument_isset(object, "yres"))
 		tiff->yres = save->ready->Yres;
-
-	tiff->customTags = save->ready->customTiffTags;
-
-	if (tiff->customTags != NULL) {
-		printf("save_tiff_build customTags not null");
-	} else {
-		printf("save_tiff_build customTags is null");
-	}
 
 	/* We default to pixels/cm.
 	 */
@@ -231,8 +230,7 @@ vips_foreign_save_tiff_build(VipsObject *object)
 			tiff->depth,
 			tiff->subifd,
 			tiff->premultiply,
-			save->page_height,
-			tiff->customTags
+			save->page_height
 			))
 		return -1;
 

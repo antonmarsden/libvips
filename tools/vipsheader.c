@@ -209,7 +209,7 @@ print_field_fn(VipsImage *image, const char *field, GValue *value, void *a)
 /* Print header, or parts of header.
  */
 static int
-print_header(VipsImage *image, gboolean many)
+print_header(VipsImage *image, gboolean many, const CustomTiffTags *customTags)
 {
 	if (main_option_fields)
 		vips_slist_map2(main_option_fields, dump_field, image, NULL);
@@ -312,7 +312,7 @@ main(int argc, char *argv[])
 		}
 
 		if (image &&
-			print_header(image, argv[2] != NULL)) {
+			print_header(image, argv[2] != NULL, &customTiffTags)) {
 			print_error();
 			result = 1;
 		}

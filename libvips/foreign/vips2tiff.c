@@ -394,8 +394,6 @@ struct _Wtiff {
 	/* Lock thread calls into libtiff with this.
 	 */
 	GMutex *lock;
-
-	CustomTiffTags *customTags;
 };
 
 /* Write an ICC Profile from a file into the JPEG stream.
@@ -1087,6 +1085,48 @@ wtiff_write_header(Wtiff *wtiff, Layer *layer)
 	}
 #endif /*HAVE_JPEG*/
 
+	if (vips_image_get_typeof(wtiff->ready, VIPS_META_CUSTOM_TIFF_TAGS)) {
+		const CustomTiffTags *customTags;
+		size_t customTagLength = 0;
+		vips_image_get_blob(wtiff->ready, VIPS_META_CUSTOM_TIFF_TAGS, (const void **) &customTags, &customTagLength);
+		TIFFMergeFieldInfo(tif, customTags->tags, customTags->len);
+		printf("writer custom tag count: %d\n", customTags->len);
+		const TIFFFieldInfo *tag = customTags->tags;
+		for (size_t i = 0; i < customTags->len; i++) {
+			printf("write %d: %s\n", tag->field_tag, tag->field_name);
+			switch (tag->field_type) {
+			case TIFF_SHORT:
+				printf("write short\n");
+				//				if (TIFFGetField(wtiff->tiff, tag->field_tag, &data_len, &data)) {
+				//					vips_image_set_blob_copy(out, tag->field_name, data, data_len * 2);
+				//				}
+				break;
+			case TIFF_ASCII:
+				printf("write ascii\n");
+				//				if (TIFFGetField(rtiff->tiff, tag->field_tag, &data_len, &data)) {
+				//					vips_image_set_blob_copy(out, tag->field_name, data, data_len);
+				//				}
+				break;
+			case TIFF_DOUBLE:
+				printf("write double\n");
+				//				if (TIFFGetField(rtiff->tiff, tag->field_tag, &data_len, &data)) {
+				//					vips_image_set_blob_copy(out, tag->field_name, data, data_len * 8);
+				//				}
+				break;
+			default:
+				printf("unknown type: %d\n", tag->field_type);
+				break;
+			}
+			//			if (TIFFGetField(rtiff->tiff, tag->field_tag, &data_len, &data)) {
+			//				vips_image_set_blob_copy(out, tag->field_name, data, data_len);
+			//			}
+			tag++;
+		}
+
+	} else {
+		printf("Custom tags is NULL on write_header call");
+	}
+
 	return 0;
 }
 
@@ -1323,8 +1363,7 @@ wtiff_new(VipsImage *input, VipsTarget *target,
 	VipsForeignDzDepth depth,
 	gboolean subifd,
 	gboolean premultiply,
-	int page_height,
-	CustomTiffTags *customTags)
+	int page_height)
 {
 	Wtiff *wtiff;
 
@@ -1363,7 +1402,6 @@ wtiff_new(VipsImage *input, VipsTarget *target,
 	wtiff->n_pages = 1;
 	wtiff->image_height = input->Ysize;
 	wtiff->lock = vips_g_mutex_new();
-	wtiff->customTags = customTags;
 
 	/* Any pre-processing on the image.
 	 */
@@ -2398,7 +2436,7 @@ wtiff_gather(Wtiff *wtiff)
 			if (!(source = vips_source_new_from_target(layer->target)))
 				return -1;
 
-			if (!(in = vips__tiff_openin_source(source, wtiff->customTags))) {
+			if (!(in = vips__tiff_openin_source(source, NULL))) {
 				VIPS_UNREF(source);
 				return -1;
 			}
@@ -2595,8 +2633,7 @@ vips__tiff_write_target(VipsImage *input, VipsTarget *target,
 	VipsForeignDzDepth depth,
 	gboolean subifd,
 	gboolean premultiply,
-	int page_height,
-	CustomTiffTags *customTags)
+	int page_height)
 {
 	Wtiff *wtiff;
 
@@ -2607,7 +2644,7 @@ vips__tiff_write_target(VipsImage *input, VipsTarget *target,
 			  tile, tile_width, tile_height, pyramid, bitdepth,
 			  miniswhite, resunit, xres, yres, bigtiff, rgbjpeg,
 			  properties, region_shrink, level, lossless, depth,
-			  subifd, premultiply, page_height, customTags)))
+			  subifd, premultiply, page_height)))
 		return -1;
 
 	if (vips_sink_disc(wtiff->ready, wtiff_sink_disc_strip, wtiff)) {

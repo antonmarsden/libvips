@@ -71,8 +71,7 @@ int vips__tiff_write_target(VipsImage *in, VipsTarget *target,
 	VipsForeignDzDepth depth,
 	gboolean subifd,
 	gboolean premultiply,
-	int page_height,
-	CustomTiffTags *customTags);
+	int page_height);
 
 gboolean vips__istiff_source(VipsSource *source);
 gboolean vips__istifftiled_source(VipsSource *source);

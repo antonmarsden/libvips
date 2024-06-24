@@ -3,6 +3,7 @@ examples = [
     'new-from-buffer',
     'progress-cancel',
     'use-vips-func',
+    'copy-tiff-tags',
 ]
 
 foreach example : examples
