@@ -1094,27 +1094,32 @@ wtiff_write_header(Wtiff *wtiff, Layer *layer)
 		const TIFFFieldInfo *tag = customTags->tags;
 		for (size_t i = 0; i < customTags->len; i++) {
 			printf("write %d: %s\n", tag->field_tag, tag->field_name);
+			const void *data;
+			size_t data_len;
 			switch (tag->field_type) {
 			case TIFF_SHORT:
+				if (vips_image_get_typeof(wtiff->ready, tag->field_name)) {
+					vips_image_get_blob(wtiff->ready, tag->field_name, &data, &data_len);
+					TIFFSetField(tif, tag->field_tag, data_len / 2, data);
+				}
 				printf("write short\n");
-				//				if (TIFFGetField(wtiff->tiff, tag->field_tag, &data_len, &data)) {
-				//					vips_image_set_blob_copy(out, tag->field_name, data, data_len * 2);
-				//				}
 				break;
 			case TIFF_ASCII:
+				if (vips_image_get_typeof(wtiff->ready, tag->field_name)) {
+					vips_image_get_blob(wtiff->ready, tag->field_name, &data, &data_len);
+					TIFFSetField(tif, tag->field_tag, data);
+				}
 				printf("write ascii\n");
-				//				if (TIFFGetField(rtiff->tiff, tag->field_tag, &data_len, &data)) {
-				//					vips_image_set_blob_copy(out, tag->field_name, data, data_len);
-				//				}
 				break;
 			case TIFF_DOUBLE:
+				if (vips_image_get_typeof(wtiff->ready, tag->field_name)) {
+					vips_image_get_blob(wtiff->ready, tag->field_name, &data, &data_len);
+					TIFFSetField(tif, tag->field_tag, data_len / 8, data);
+				}
 				printf("write double\n");
-				//				if (TIFFGetField(rtiff->tiff, tag->field_tag, &data_len, &data)) {
-				//					vips_image_set_blob_copy(out, tag->field_name, data, data_len * 8);
-				//				}
 				break;
 			default:
-				printf("unknown type: %d\n", tag->field_type);
+				printf("unsupported type: %d\n", tag->field_type);
 				break;
 			}
 			//			if (TIFFGetField(rtiff->tiff, tag->field_tag, &data_len, &data)) {
