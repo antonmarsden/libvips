@@ -122,7 +122,6 @@
 #include <vips/vips.h>
 #include <vips/internal.h>
 
-
 /* Default settings. We change the default to bicubic in main() if
  * this vips has been compiled with bicubic support.
  */

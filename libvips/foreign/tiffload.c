@@ -527,8 +527,6 @@ vips_tiffload(const char *filename, VipsImage **out, ...)
 {
 	va_list ap;
 	int result;
-	printf("tiffload!\n");
-
 
 	va_start(ap, out);
 	result = vips_call_split("tiffload", ap, filename, out);

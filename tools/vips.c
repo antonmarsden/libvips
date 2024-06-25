@@ -105,8 +105,6 @@
 
 #if ENABLE_DEPRECATED
 #include <vips/vips7compat.h>
-#include <tiffio.h>
-#include "libvips/foreign/tiff.h"
 #endif
 
 static char *main_option_plugin = NULL;

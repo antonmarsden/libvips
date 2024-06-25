@@ -35,9 +35,6 @@
 extern "C" {
 #endif /*__cplusplus*/
 
-#include <tiffio.h>
-#include "tiff.h"
-
 /* We've seen real images with 28 chunks, so set 50.
  */
 #define MAX_PNG_TEXT_CHUNKS 50

@@ -58,7 +58,6 @@
 #include <tiffio.h>
 
 #include "tiff.h"
-#include "pforeign.h"
 
 /* Handle TIFF errors here. Shared with vips2tiff.c. These can be called from
  * more than one thread.

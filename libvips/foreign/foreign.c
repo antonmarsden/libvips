@@ -71,6 +71,8 @@
 #include <vips/internal.h>
 #include <vips/debug.h>
 
+#include "pforeign.h"
+
 /**
  * SECTION: foreign
  * @short_description: load and save images in a variety of formats
