@@ -59,6 +59,18 @@
 
 #include "tiff.h"
 
+static GMutex *vips_tiff_tag_extender_mutex = NULL;
+static TIFFExtendProc vips_tiff_prev_extend_proc = NULL;
+static VipsForeignTiffTags *vips_tiff_custom_tags = NULL;
+
+static void vips_tiff_merge_custom_tags(TIFF *tiff) {
+	if (vips_tiff_custom_tags != NULL) {
+		TIFFMergeFieldInfo(tiff, vips_tiff_custom_tags->tags, vips_tiff_custom_tags->len);
+	}
+	TIFFSetTagExtender(vips_tiff_prev_extend_proc);
+	vips_tiff_prev_extend_proc = NULL;
+}
+
 /* Handle TIFF errors here. Shared with vips2tiff.c. These can be called from
  * more than one thread.
  */
@@ -88,6 +100,7 @@ vips__tiff_init(void)
 {
 	TIFFSetErrorHandler(vips__thandler_error);
 	TIFFSetWarningHandler(vips__thandler_warning);
+	vips_tiff_tag_extender_mutex = vips_g_mutex_new();
 }
 
 /* TIFF input from a vips source.
@@ -156,22 +169,8 @@ openin_source_unmap(thandle_t st, tdata_t start, toff_t len)
 	return;
 }
 
-static TIFFExtendProc _prevExtendProc = NULL;
-static VipsForeignTiffTags *_customTags = NULL;
-//int (*getFunc())(int, int) { … }
-
-
-static void initCustomTags(TIFF *tiff) {
-	if (_customTags != NULL) {
-		printf("Calling TIFFMergeFieldInfo, len = %d\n", _customTags->len);
-		TIFFMergeFieldInfo(tiff, _customTags->tags, _customTags->len);
-	}
-	TIFFSetTagExtender(_prevExtendProc);
-	_prevExtendProc = NULL;
-}
-
 TIFF *
-vips__tiff_openin_source(VipsSource *source, VipsForeignTiffTags *customTags)
+vips__tiff_openin_source(VipsSource *source, VipsForeignTiffTags *custom_tags)
 {
 	TIFF *tiff;
 
@@ -182,13 +181,10 @@ vips__tiff_openin_source(VipsSource *source, VipsForeignTiffTags *customTags)
 	if (vips_source_rewind(source))
 		return NULL;
 
-
-	if (customTags != NULL) {
-		printf("customTags is defined, setting up extender\n");
-		_customTags = customTags;
-		_prevExtendProc = TIFFSetTagExtender(initCustomTags);
-	} else {
-		printf("customTags is NULL!!!\n");
+	if (custom_tags != NULL) {
+		g_mutex_lock(vips_tiff_tag_extender_mutex);
+		vips_tiff_custom_tags = custom_tags;
+		vips_tiff_prev_extend_proc = TIFFSetTagExtender(vips_tiff_merge_custom_tags);
 	}
 
 	/* Disable memory mapped input -- it chews up VM and the performance
@@ -209,7 +205,13 @@ vips__tiff_openin_source(VipsSource *source, VipsForeignTiffTags *customTags)
 			  openin_source_unmap))) {
 		vips_error("vips__tiff_openin_source", "%s",
 			_("unable to open source for input"));
+		if (custom_tags != NULL) {
+			g_mutex_unlock(vips_tiff_tag_extender_mutex);
+		}
 		return NULL;
+	}
+	if (custom_tags != NULL) {
+		g_mutex_unlock(vips_tiff_tag_extender_mutex);
 	}
 
 	/* Unreffed on close(), see above.

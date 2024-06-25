@@ -37,7 +37,7 @@
 extern "C" {
 #endif /*__cplusplus*/
 
-TIFF *vips__tiff_openin_source(VipsSource *source, VipsForeignTiffTags *customTags);
+TIFF *vips__tiff_openin_source(VipsSource *source, VipsForeignTiffTags *custom_tags);
 
 TIFF *vips__tiff_openout(const char *path, gboolean bigtiff);
 TIFF *vips__tiff_openout_target(VipsTarget *target, gboolean bigtiff);
