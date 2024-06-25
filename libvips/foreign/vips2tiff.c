@@ -1086,13 +1086,13 @@ wtiff_write_header(Wtiff *wtiff, Layer *layer)
 #endif /*HAVE_JPEG*/
 
 	if (vips_image_get_typeof(wtiff->ready, VIPS_META_CUSTOM_TIFF_TAGS)) {
-		const VipsForeignTiffTags *customTags;
+		const VipsForeignTiffTags *custom_tags;
 		size_t customTagLength = 0;
-		vips_image_get_blob(wtiff->ready, VIPS_META_CUSTOM_TIFF_TAGS, (const void **) &customTags, &customTagLength);
-		TIFFMergeFieldInfo(tif, customTags->tags, customTags->len);
-		printf("writer custom tag count: %d\n", customTags->len);
-		const TIFFFieldInfo *tag = customTags->tags;
-		for (size_t i = 0; i < customTags->len; i++) {
+		vips_image_get_blob(wtiff->ready, VIPS_META_CUSTOM_TIFF_TAGS, (const void **) &custom_tags, &customTagLength);
+		TIFFMergeFieldInfo(tif, custom_tags->tags, custom_tags->len);
+		printf("writer custom tag count: %d\n", custom_tags->len);
+		const TIFFFieldInfo *tag = custom_tags->tags;
+		for (size_t i = 0; i < custom_tags->len; i++) {
 			printf("write %d: %s\n", tag->field_tag, tag->field_name);
 			const void *data;
 			size_t data_len;
