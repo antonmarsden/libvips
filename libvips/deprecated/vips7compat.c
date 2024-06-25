@@ -493,7 +493,7 @@ im_init(const char *filename)
 int
 im_init_world(const char *argv0)
 {
-	return vips_init(argv0);
+	return  vips_init(argv0);
 }
 
 /* Prettyprint various header fields. Just for vips7 compat, use
