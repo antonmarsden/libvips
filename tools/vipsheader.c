@@ -84,7 +84,6 @@
 
 #include <vips/foreign.h>
 #include <tiffio.h>
-#include "libvips/foreign/tiff.h"
 
 static GSList *main_option_fields = NULL;
 static gboolean main_option_all = FALSE;
@@ -113,7 +112,7 @@ static const TIFFFieldInfo xtiffFieldInfo[] = {
       TRUE, FALSE,  "GeoASCIIParams" }
 };
 
-static const CustomTiffTags customTiffTags = {
+static const VipsForeignTiffTags customTiffTags = {
 	tags: xtiffFieldInfo,
 	len: sizeof(xtiffFieldInfo) / sizeof(xtiffFieldInfo[0])
 };
@@ -209,7 +208,7 @@ print_field_fn(VipsImage *image, const char *field, GValue *value, void *a)
 /* Print header, or parts of header.
  */
 static int
-print_header(VipsImage *image, gboolean many, const CustomTiffTags *customTags)
+print_header(VipsImage *image, gboolean many, const VipsForeignTiffTags *customTags)
 {
 	if (main_option_fields)
 		vips_slist_map2(main_option_fields, dump_field, image, NULL);

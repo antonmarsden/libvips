@@ -1086,7 +1086,7 @@ wtiff_write_header(Wtiff *wtiff, Layer *layer)
 #endif /*HAVE_JPEG*/
 
 	if (vips_image_get_typeof(wtiff->ready, VIPS_META_CUSTOM_TIFF_TAGS)) {
-		const CustomTiffTags *customTags;
+		const VipsForeignTiffTags *customTags;
 		size_t customTagLength = 0;
 		vips_image_get_blob(wtiff->ready, VIPS_META_CUSTOM_TIFF_TAGS, (const void **) &customTags, &customTagLength);
 		TIFFMergeFieldInfo(tif, customTags->tags, customTags->len);

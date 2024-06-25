@@ -77,7 +77,7 @@ typedef struct _VipsForeignLoadTiff {
 	 */
 	gboolean autorotate;
 
-	CustomTiffTags *customTags;
+	VipsForeignTiffTags *customTags;
 
 } VipsForeignLoadTiff;
 

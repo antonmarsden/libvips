@@ -113,7 +113,6 @@ typedef struct _VipsForeignSaveTiff {
 	VipsForeignDzDepth depth;
 	gboolean subifd;
 	gboolean premultiply;
-	CustomTiffTags *customTags;
 } VipsForeignSaveTiff;
 
 typedef VipsForeignSaveClass VipsForeignSaveTiffClass;
@@ -148,13 +147,6 @@ vips_foreign_save_tiff_build(VipsObject *object)
 	VipsForeignSaveTiff *tiff = (VipsForeignSaveTiff *) object;
 
 	const char *p;
-
-	if (tiff->customTags != NULL) {
-		printf("save_tiff_build customTags is defined");
-	} else {
-		printf("save_tiff_build customTags is null");
-	}
-
 
 	/* If we are saving jpeg-in-tiff, we need a different convert_saveable
 	 * path. The regular tiff one will let through things like float and
@@ -416,12 +408,6 @@ vips_foreign_save_tiff_class_init(VipsForeignSaveTiffClass *class)
 		VIPS_ARGUMENT_OPTIONAL_INPUT | VIPS_ARGUMENT_DEPRECATED,
 		G_STRUCT_OFFSET(VipsForeignSaveTiff, squash),
 		FALSE);
-
-	VIPS_ARG_POINTER(class, "customTags", 30,
-		_("customTags"),
-		_("Custom TIFF tags"),
-		VIPS_ARGUMENT_OPTIONAL_INPUT,
-		G_STRUCT_OFFSET(VipsForeignSaveTiff, customTags));
 }
 
 static void
@@ -440,7 +426,6 @@ vips_foreign_save_tiff_init(VipsForeignSaveTiff *tiff)
 	tiff->lossless = FALSE;
 	tiff->depth = VIPS_FOREIGN_DZ_DEPTH_ONETILE;
 	tiff->bitdepth = 0;
-	tiff->customTags = NULL;
 }
 
 typedef struct _VipsForeignSaveTiffTarget {

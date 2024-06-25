@@ -36,6 +36,7 @@ extern "C" {
 #endif /*__cplusplus*/
 
 #include <tiffio.h>
+#include "tiff.h"
 
 /* We've seen real images with 28 chunks, so set 50.
  */
@@ -45,13 +46,6 @@ int vips__foreign_update_metadata(VipsImage *in,
 	VipsForeignKeep keep);
 
 void vips__tiff_init(void);
-
-struct _CustomTiffTags {
-	const TIFFFieldInfo *tags;
-	const int len;
-};
-
-typedef struct _CustomTiffTags CustomTiffTags;
 
 int vips__tiff_write_target(VipsImage *in, VipsTarget *target,
 	VipsForeignTiffCompression compression, int Q,
@@ -76,9 +70,9 @@ int vips__tiff_write_target(VipsImage *in, VipsTarget *target,
 gboolean vips__istiff_source(VipsSource *source);
 gboolean vips__istifftiled_source(VipsSource *source);
 int vips__tiff_read_header_source(VipsSource *source, VipsImage *out,
-	int page, int n, gboolean autorotate, int subifd, CustomTiffTags *customTags, VipsFailOn fail_on);
+	int page, int n, gboolean autorotate, int subifd, VipsForeignTiffTags *customTags, VipsFailOn fail_on);
 int vips__tiff_read_source(VipsSource *source, VipsImage *out,
-	int page, int n, gboolean autorotate, int subifd, CustomTiffTags *customTags, VipsFailOn fail_on);
+	int page, int n, gboolean autorotate, int subifd, VipsForeignTiffTags *customTags, VipsFailOn fail_on);
 
 extern const char *vips__foreign_tiff_suffs[];
 

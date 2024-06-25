@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <vips/vips.h>
 #include <tiffio.h>
-#include "../foreign/pforeign.h"
 
 #define TIFFTAG_GEOPIXELSCALE       33550
 #define TIFFTAG_GEOTIEPOINTS         33922
@@ -30,7 +29,7 @@ static const TIFFFieldInfo xtiffFieldInfo[] = {
 		TRUE, FALSE,  "GeoASCIIParams" }
 };
 
-static const CustomTiffTags customTiffTags = {
+static const VipsForeignTiffTags customTiffTags = {
 	tags: xtiffFieldInfo,
 	len: sizeof(xtiffFieldInfo) / sizeof(xtiffFieldInfo[0])
 };

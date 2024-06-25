@@ -158,7 +158,7 @@ openin_source_unmap(thandle_t st, tdata_t start, toff_t len)
 }
 
 static TIFFExtendProc _prevExtendProc = NULL;
-static CustomTiffTags *_customTags = NULL;
+static VipsForeignTiffTags *_customTags = NULL;
 //int (*getFunc())(int, int) { … }
 
 
@@ -172,7 +172,7 @@ static void initCustomTags(TIFF *tiff) {
 }
 
 TIFF *
-vips__tiff_openin_source(VipsSource *source, CustomTiffTags *customTags)
+vips__tiff_openin_source(VipsSource *source, VipsForeignTiffTags *customTags)
 {
 	TIFF *tiff;
 
