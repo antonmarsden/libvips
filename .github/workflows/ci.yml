@@ -42,20 +42,20 @@ jobs:
             meson pkg-config \
             libarchive-dev libcfitsio-dev libcgif-dev \
             libexif-dev libexpat1-dev libffi-dev \
-            libfftw3-dev libheif-dev libheif-plugin-x265 \
-            libhwy-dev libimagequant-dev libjpeg-dev \
-            libjxl-dev liblcms2-dev libmatio-dev \
-            libnifti-dev libopenexr-dev libopenjp2-7-dev \
-            libopenslide-dev libpango1.0-dev libpng-dev \
-            libpoppler-glib-dev librsvg2-dev libtiff5-dev \
-            libwebp-dev
+            libfftw3-dev libheif-dev libheif-plugin-aomenc \
+            libheif-plugin-x265 libhwy-dev libimagequant-dev \
+            libjpeg-dev libjxl-dev liblcms2-dev \
+            libmatio-dev libnifti-dev libopenexr-dev \
+            libopenjp2-7-dev libopenslide-dev libpango1.0-dev \
+            libpng-dev libpoppler-glib-dev librsvg2-dev \
+            libtiff5-dev libwebp-dev
 
       - name: Install macOS dependencies
         if: runner.os == 'macOS'
         run: |
           pip3 install meson --break-system-packages
           brew install \
-            ninja pkg-config \
+            ninja pkgconf \
             cfitsio cgif fftw fontconfig glib \
             highway jpeg-xl libarchive libexif \
             libheif libimagequant libmatio librsvg \
@@ -93,10 +93,11 @@ jobs:
           echo "$LLVM_PREFIX/bin" >> $GITHUB_PATH
 
       - name: Configure libvips
-        run: |
-          meson setup build \
-            -Ddebug=true \
-            -Ddeprecated=false \
+        run:
+          meson setup build
+            -Ddebug=true
+            -Ddeprecated=false
+            -Dmagick=disabled
           || (cat build/meson-logs/meson-log.txt && exit 1)
 
       - name: Build libvips

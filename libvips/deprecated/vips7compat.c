@@ -46,7 +46,6 @@
 #include <ctype.h>
 
 #include <vips/vips.h>
-#include <vips/vips7compat.h>
 #include <vips/internal.h>
 #include <vips/debug.h>
 #include <vips/transform.h>
@@ -80,7 +79,7 @@ im_filename_split(const char *path, char *name, char *mode)
 	char *p;
 	size_t len;
 
-	vips_strncpy(name, path, FILENAME_MAX);
+	g_strlcpy(name, path, FILENAME_MAX);
 	strcpy(mode, "");
 
 	if ((len = strlen(name)) == 0)
@@ -93,9 +92,9 @@ im_filename_split(const char *path, char *name, char *mode)
 			char *q;
 
 			/* We are skipping back over the file extension,
-			 * isalnum() is probably sufficient.
+			 * g_ascii_isalnum() is probably sufficient.
 			 */
-			for (q = p - 1; isalnum(*q) && q > name; q -= 1)
+			for (q = p - 1; g_ascii_isalnum(*q) && q > name; q -= 1)
 				;
 
 			if (*q == '.') {
@@ -121,7 +120,7 @@ im_filename_split(const char *path, char *name, char *mode)
 	 */
 	if (*p == ':' &&
 		p - name != 1) {
-		vips_strncpy(mode, p + 1, FILENAME_MAX);
+		g_strlcpy(mode, p + 1, FILENAME_MAX);
 		*p = '\0';
 	}
 }

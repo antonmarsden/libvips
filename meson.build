@@ -1,5 +1,5 @@
 project('vips', 'c', 'cpp',
-    version: '8.16.0',
+    version: '8.17.0',
     meson_version: '>=0.55',
     default_options: [
         # this is what glib uses (one of our required deps), so we use it too
@@ -24,8 +24,8 @@ version_patch = version_parts[2]
 #   binary interface changes backwards compatible?: increment age
 #   binary interface changes not backwards compatible?: reset age to 0
 library_revision = 0
-library_current = 60
-library_age = 18
+library_current = 61
+library_age = 19
 library_version = '@0@.@1@.@2@'.format(library_current - library_age, library_age, library_revision)
 darwin_versions = [library_current + 1, '@0@.@1@'.format(library_current + 1, library_revision)]
 
@@ -35,7 +35,7 @@ pkg = import('pkgconfig')
 i18n = import('i18n')
 
 # if we're optimising (eg. release mode) we turn off cast checks and g_asserts
-if get_option('optimization') in ['2', '3', 's']
+if get_option('optimization') not in ['0', 'g']
     add_project_arguments('-DG_DISABLE_CAST_CHECKS', language : ['cpp', 'c'])
     add_project_arguments('-DG_DISABLE_CHECKS', language : ['cpp', 'c'])
     add_project_arguments('-DG_DISABLE_ASSERT', language : ['cpp', 'c'])
@@ -122,10 +122,10 @@ endif
 # Detect and set symbol visibility
 if get_option('default_library') == 'shared' and host_os in ['windows', 'cygwin']
     cfg_var.set('DLL_EXPORT', true)
-    if cc.get_id() == 'msvc' or cc.get_id() == 'clang-cl'
-        cfg_var.set('_VIPS_PUBLIC', '__declspec(dllexport)')
-    elif cc.has_function_attribute('visibility:hidden')
+    if cc.has_function_attribute('visibility:hidden')
         cfg_var.set('_VIPS_PUBLIC', '__attribute__((visibility("default"))) __declspec(dllexport)')
+    else
+        cfg_var.set('_VIPS_PUBLIC', '__declspec(dllexport)')
     endif
 elif cc.has_function_attribute('visibility:hidden')
     cfg_var.set('_VIPS_PUBLIC', '__attribute__((visibility("default")))')
@@ -179,21 +179,9 @@ if have_target_clones
     cfg_var.set('HAVE_TARGET_CLONES', '1')
 endif
 
-# windows needs to include stdio.h to find vsnprintf()
-if cc.has_function('vsnprintf', prefix: '#include <stdio.h>')
-    cfg_var.set('HAVE_VSNPRINTF', '1')
-endif
-
 func_names = [ '_aligned_malloc', 'posix_memalign', 'memalign' ]
 foreach func_name : func_names
     if cc.has_function(func_name)
-        cfg_var.set('HAVE_' + func_name.to_upper(), '1')
-    endif
-endforeach
-
-func_names = [ 'cbrt', 'hypot', 'atan2', 'asinh' ]
-foreach func_name : func_names
-    if cc.has_function(func_name, dependencies: m_dep)
         cfg_var.set('HAVE_' + func_name.to_upper(), '1')
     endif
 endforeach
@@ -322,6 +310,9 @@ if quantisation_package.found()
         if cc.compiles('#include <cgif.h>\nint i = CGIF_FRAME_ATTR_INTERLACED;', name: 'Has CGIF_FRAME_ATTR_INTERLACED', dependencies: cgif_dep)
             cfg_var.set('HAVE_CGIF_FRAME_ATTR_INTERLACED', '1')
         endif
+        if cc.compiles('#include <cgif.h>\nint i = CGIF_GEN_KEEP_IDENT_FRAMES;', name: 'Has CGIF_GEN_KEEP_IDENT_FRAMES', dependencies: cgif_dep)
+            cfg_var.set('HAVE_CGIF_GEN_KEEP_IDENT_FRAMES', '1')
+        endif
     endif
 endif
 
@@ -422,6 +413,14 @@ if libtiff_dep.found()
     # ZSTD and WEBP in TIFF added in libtiff 4.0.10
     if cc.get_define('COMPRESSION_WEBP', prefix: '#include <tiff.h>', dependencies: libtiff_dep) != ''
         cfg_var.set('HAVE_TIFF_COMPRESSION_WEBP', '1')
+    endif
+    # TIFFOpenOptions added in libtiff 4.5.0
+    if cc.has_function('TIFFOpenOptionsAlloc', prefix: '#include <tiffio.h>', dependencies: libtiff_dep)
+        cfg_var.set('HAVE_TIFF_OPEN_OPTIONS', '1')
+    endif
+    # TIFFOpenOptionsSetMaxCumulatedMemAlloc added in libtiff 4.7.0
+    if cc.has_function('TIFFOpenOptionsSetMaxCumulatedMemAlloc', prefix: '#include <tiffio.h>', dependencies: libtiff_dep)
+        cfg_var.set('HAVE_TIFF_OPEN_OPTIONS_SET_MAX_CUMULATED_MEM_ALLOC', '1')
     endif
 endif
 
@@ -560,10 +559,22 @@ if libheif_dep.found()
     if libheif_dep.version().version_compare('>=1.7.0')
         cfg_var.set('HAVE_HEIF_AVIF', '1')
     endif
+    # added in 1.10.0
+    if cpp.has_function('heif_encoder_parameter_get_valid_integer_values', prefix: '#include <libheif/heif.h>', dependencies: libheif_dep)
+        cfg_var.set('HAVE_HEIF_ENCODER_PARAMETER_GET_VALID_INTEGER_VALUES', '1')
+    endif
+    # added in 1.11.0
+    if cpp.has_member('struct heif_encoding_options', 'output_nclx_profile', prefix: '#include <libheif/heif.h>', dependencies: libheif_dep)
+        cfg_var.set('HAVE_HEIF_ENCODING_OPTIONS_OUTPUT_NCLX_PROFILE', '1')
+    endif
 
-    # heif_init in 1.13
+    # heif_init added in 1.13.0
     if libheif_dep.version().version_compare('>=1.13.0')
         cfg_var.set('HAVE_HEIF_INIT', '1')
+    endif
+    # heif_encoding_options.image_orientation added in 1.14.0
+    if cpp.has_member('struct heif_encoding_options', 'image_orientation', prefix: '#include <libheif/heif.h>', dependencies: libheif_dep)
+        cfg_var.set('HAVE_HEIF_ENCODING_OPTIONS_IMAGE_ORIENTATION', '1')
     endif
     # heif_error_success added in 1.17.0
     if libheif_dep.version().version_compare('>=1.17.0')
@@ -749,7 +760,7 @@ build_summary = {
      'enable examples': [get_option('examples')],
      'enable cplusplus': [get_option('cplusplus')],
      'enable RAD load/save': [get_option('radiance')],
-     'enable Analyze7 load/save': [get_option('analyze')],
+     'enable Analyze7 load': [get_option('analyze')],
      'enable PPM load/save': [get_option('ppm')],
      'enable GIF load': [get_option('nsgif')],
     },

@@ -196,7 +196,7 @@ vips_foreign_load_png_set_text(VipsImage *out,
 		/* Save as a string comment. Some PNGs have EXIF data as
 		 * text segments, unfortunately.
 		 */
-		vips_snprintf(name, 256, "png-comment-%d-%s", i, key);
+		g_snprintf(name, 256, "png-comment-%d-%s", i, key);
 
 		vips_image_set_string(out, name, value);
 	}
@@ -673,12 +673,14 @@ vips_foreign_load_png_class_init(VipsForeignLoadPngClass *class)
 	load_class->header = vips_foreign_load_png_header;
 	load_class->load = vips_foreign_load_png_load;
 
+#ifndef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
 	VIPS_ARG_BOOL(class, "unlimited", 23,
 		_("Unlimited"),
 		_("Remove all denial of service limits"),
 		VIPS_ARGUMENT_OPTIONAL_INPUT,
 		G_STRUCT_OFFSET(VipsForeignLoadPng, unlimited),
 		FALSE);
+#endif
 }
 
 static void

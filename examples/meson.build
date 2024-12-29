@@ -4,6 +4,7 @@ examples = [
     'progress-cancel',
     'use-vips-func',
     'copy-tiff-tags',
+    'my-add',
 ]
 
 foreach example : examples

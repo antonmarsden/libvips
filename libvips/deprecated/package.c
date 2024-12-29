@@ -58,7 +58,6 @@
 #include <limits.h>
 
 #include <vips/vips.h>
-#include <vips/vips7compat.h>
 #include <vips/internal.h>
 #include <vips/debug.h>
 
@@ -323,7 +322,7 @@ static int
 getext_vec(im_object *argv)
 {
 	void **out = (void **) &argv[1];
-	int size;
+	size_t size;
 
 	/* void/char confusion is fine.
 	 */

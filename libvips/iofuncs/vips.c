@@ -506,7 +506,7 @@ vips__has_extension_block(VipsImage *im)
 /* Read everything after the pixels into memory.
  */
 void *
-vips__read_extension_block(VipsImage *im, int *size)
+vips__read_extension_block(VipsImage *im, size_t *size)
 {
 	gint64 psize;
 	void *buf;
@@ -515,8 +515,7 @@ vips__read_extension_block(VipsImage *im, int *size)
 	g_assert(im->file_length > 0);
 	if (im->file_length - psize > 100 * 1024 * 1024) {
 		vips_error("VipsImage",
-			"%s", _("more than 100 megabytes of XML? "
-					"sufferin' succotash!"));
+			"%s", _("more than 100 megabytes of XML? sufferin' succotash!"));
 		return NULL;
 	}
 	if (im->file_length - psize == 0)
@@ -617,9 +616,9 @@ parser_element_start_handler(void *user_data,
 	if (strcmp(name, "field") == 0) {
 		for (p = atts; *p; p += 2) {
 			if (strcmp(p[0], "name") == 0)
-				vips_strncpy(vep->name, p[1], MAX_PARSE_ATTR);
+				g_strlcpy(vep->name, p[1], MAX_PARSE_ATTR);
 			if (strcmp(p[0], "type") == 0)
-				vips_strncpy(vep->type, p[1], MAX_PARSE_ATTR);
+				g_strlcpy(vep->type, p[1], MAX_PARSE_ATTR);
 		}
 
 		vips_dbuf_reset(&vep->dbuf);
@@ -773,7 +772,7 @@ readhist(VipsImage *im)
 }
 
 int
-vips__write_extension_block(VipsImage *im, void *buf, int size)
+vips__write_extension_block(VipsImage *im, void *buf, size_t size)
 {
 	gint64 length;
 	gint64 psize;
@@ -793,7 +792,7 @@ vips__write_extension_block(VipsImage *im, void *buf, int size)
 		return -1;
 
 #ifdef DEBUG
-	printf("vips__write_extension_block: written %d bytes of XML to %s\n",
+	printf("vips__write_extension_block: written %zd bytes of XML to %s\n",
 		size, im->filename);
 #endif /*DEBUG*/
 

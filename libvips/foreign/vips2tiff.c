@@ -367,7 +367,7 @@ struct _Wtiff {
 	int rgbjpeg;					/* True for RGB not YCbCr */
 	int properties;					/* Set to save XML props */
 	VipsRegionShrink region_shrink; /* How to shrink regions */
-	int level;						/* zstd compression level */
+	int level;						/* Deflate (zlib) / zstd compression level */
 	gboolean lossless;				/* lossless mode */
 	VipsForeignDzDepth depth;		/* Pyr depth */
 	gboolean subifd;				/* Write pyr layers into subifds */
@@ -441,6 +441,22 @@ embed_profile_meta(TIFF *tif, VipsImage *im)
 	return 0;
 }
 
+static int
+wtiff_handler_error(TIFF *tiff, void* user_data,
+	const char *module, const char *fmt, va_list ap)
+{
+	vips_verror("vips2tiff", fmt, ap);
+	return 1;
+}
+
+static int
+wtiff_handler_warning(TIFF *tiff, void* user_data,
+	const char *module, const char *fmt, va_list ap)
+{
+	g_logv("vips2tiff", G_LOG_LEVEL_WARNING, fmt, ap);
+	return 1;
+}
+
 static void
 wtiff_layer_init(Wtiff *wtiff, Layer **layer, Layer *above,
 	int width, int height)
@@ -504,6 +520,9 @@ wtiff_layer_init(Wtiff *wtiff, Layer **layer, Layer *above,
 			break;
 
 		default:
+			// stop a compiler warning
+			limitw = 128;
+			limith = 128;
 			g_assert_not_reached();
 		}
 
@@ -513,8 +532,7 @@ wtiff_layer_init(Wtiff *wtiff, Layer **layer, Layer *above,
 		 * Very tall or wide images might end up with a smallest layer
 		 * larger than one tile.
 		 */
-		if (((*layer)->width > limitw ||
-				(*layer)->height > limith) &&
+		if (((*layer)->width > limitw || (*layer)->height > limith) &&
 			(*layer)->width > 1 &&
 			(*layer)->height > 1)
 			wtiff_layer_init(wtiff, &(*layer)->below, *layer,
@@ -686,28 +704,27 @@ wtiff_compress_jpeg_header(Wtiff *wtiff,
 	 */
 	jpeg_set_quality(cinfo, wtiff->Q, TRUE);
 
-	if (image->Bands != 3 ||
-		wtiff->Q >= 90)
-		/* No chroma subsample.
-		 */
-		for (int i = 0; i < image->Bands; i++) {
-			cinfo->comp_info[i].h_samp_factor = 1;
-			cinfo->comp_info[i].v_samp_factor = 1;
-		}
-	else {
-		/* Use 4:2:0 subsampling, we must set this explicitly, since some
-		 * jpeg libraries do not enable chroma subsample by default.
-		 */
-		cinfo->comp_info[0].h_samp_factor = 2;
-		cinfo->comp_info[0].v_samp_factor = 2;
+	/* We must set chroma subsampling explicitly since some libjpegs do not
+	 * enable this by default.
+	 */
+	if (image->Bands == 3 &&
+		wtiff->Q < 90)
+		cinfo->comp_info[0].h_samp_factor = cinfo->comp_info[0].v_samp_factor = 2;
+	else
+		cinfo->comp_info[0].h_samp_factor = cinfo->comp_info[0].v_samp_factor = 1;
 
-		/* Rest should have sampling factors 1,1.
-		 */
-		for (int i = 1; i < image->Bands; i++) {
-			cinfo->comp_info[i].h_samp_factor = 1;
-			cinfo->comp_info[i].v_samp_factor = 1;
-		}
-	}
+	/* Rest should have sampling factors 1,1.
+	 */
+	for (int i = 1; i < image->Bands; i++)
+		cinfo->comp_info[i].h_samp_factor = cinfo->comp_info[i].v_samp_factor = 1;
+
+	/* For low Q, we write YCbCr, for high Q, RGB. The jpeg coeffs don't
+	 * encode the photometric interpretation, the tiff header does that,
+	 * so this code must be kept synced with wtiff_write_header().
+	 */
+	if (image->Bands == 3 &&
+		wtiff->Q >= 90)
+		jpeg_set_colorspace(cinfo, JCS_RGB);
 
 	// Avoid writing the JFIF APP0 marker.
 	cinfo->write_JFIF_header = FALSE;
@@ -731,6 +748,9 @@ wtiff_compress_jpeg(Wtiff *wtiff,
 
 	// we could have one of these per thread and reuse it for a small speedup
 	cinfo.err = jpeg_std_error(&eman.pub);
+	cinfo.err->addon_message_table = vips__jpeg_message_table;
+	cinfo.err->first_addon_message = 1000;
+	cinfo.err->last_addon_message = 1001;
 	cinfo.dest = NULL;
 	eman.pub.error_exit = vips__new_error_exit;
 	eman.pub.output_message = vips__new_output_message;
@@ -739,7 +759,7 @@ wtiff_compress_jpeg(Wtiff *wtiff,
 	// we need a line buffer to pad edge tiles
 	line = VIPS_MALLOC(NULL, wtiff->tilew * sizeof_pel);
 
-	/* Error handling. The error message will have ben set by our handlers.
+	/* Error handling. The error message will have been set by our handlers.
 	 */
 	if (setjmp(eman.jmp)) {
 		jpeg_destroy_compress(&cinfo);
@@ -804,6 +824,9 @@ wtiff_compress_jpeg_tables(Wtiff *wtiff,
 	struct jpeg_error_mgr jerr;
 
 	cinfo.err = jpeg_std_error(&jerr);
+	cinfo.err->addon_message_table = vips__jpeg_message_table;
+	cinfo.err->first_addon_message = 1000;
+	cinfo.err->last_addon_message = 1001;
 	jpeg_create_compress(&cinfo);
 
 	/* Attach output.
@@ -853,12 +876,18 @@ wtiff_write_header(Wtiff *wtiff, Layer *layer)
 		TIFFSetField(tif, TIFFTAG_WEBP_LOSSLESS, wtiff->lossless);
 	}
 	if (wtiff->compression == COMPRESSION_ZSTD) {
-		TIFFSetField(tif, TIFFTAG_ZSTD_LEVEL, wtiff->level);
+		// Set zstd compression level - only accept valid values (1-22)
+		if (wtiff->level)
+			TIFFSetField(tif, TIFFTAG_ZSTD_LEVEL, VIPS_CLIP(1, wtiff->level, 22));
 		if (wtiff->predictor != VIPS_FOREIGN_TIFF_PREDICTOR_NONE)
 			TIFFSetField(tif,
 				TIFFTAG_PREDICTOR, wtiff->predictor);
 	}
 #endif /*HAVE_TIFF_COMPRESSION_WEBP*/
+
+	// Set deflate (zlib) compression level - only accept valid values (1-9)
+	if (wtiff->compression == COMPRESSION_ADOBE_DEFLATE && wtiff->level)
+		TIFFSetField(tif, TIFFTAG_ZIPQUALITY, VIPS_CLIP(1, wtiff->level, 9));
 
 	if ((wtiff->compression == COMPRESSION_ADOBE_DEFLATE ||
 			wtiff->compression == COMPRESSION_LZW) &&
@@ -934,9 +963,8 @@ wtiff_write_header(Wtiff *wtiff, Layer *layer)
 			wtiff->ready->Bands < 3) {
 			/* Mono or mono + alpha.
 			 */
-			photometric = wtiff->miniswhite
-				? PHOTOMETRIC_MINISWHITE
-				: PHOTOMETRIC_MINISBLACK;
+			photometric = wtiff->miniswhite ?
+				PHOTOMETRIC_MINISWHITE : PHOTOMETRIC_MINISBLACK;
 			colour_bands = 1;
 		}
 		else if (wtiff->ready->Type == VIPS_INTERPRETATION_LAB ||
@@ -950,12 +978,10 @@ wtiff_write_header(Wtiff *wtiff, Layer *layer)
 			photometric = PHOTOMETRIC_LOGLUV;
 			/* Tell libtiff we will write as float XYZ.
 			 */
-			TIFFSetField(tif,
-				TIFFTAG_SGILOGDATAFMT, SGILOGDATAFMT_FLOAT);
+			TIFFSetField(tif, TIFFTAG_SGILOGDATAFMT, SGILOGDATAFMT_FLOAT);
 			stonits = 1.0;
 			if (vips_image_get_typeof(wtiff->ready, "stonits"))
-				vips_image_get_double(wtiff->ready,
-					"stonits", &stonits);
+				vips_image_get_double(wtiff->ready, "stonits", &stonits);
 			TIFFSetField(tif, TIFFTAG_STONITS, stonits);
 			colour_bands = 3;
 		}
@@ -974,8 +1000,7 @@ wtiff_write_header(Wtiff *wtiff, Layer *layer)
 			 * that we will supply the image as YCbCr.
 			 */
 			photometric = PHOTOMETRIC_YCBCR;
-			TIFFSetField(tif, TIFFTAG_JPEGCOLORMODE,
-				JPEGCOLORMODE_RGB);
+			TIFFSetField(tif, TIFFTAG_JPEGCOLORMODE, JPEGCOLORMODE_RGB);
 			colour_bands = 3;
 		}
 		else {
@@ -1001,11 +1026,9 @@ wtiff_write_header(Wtiff *wtiff, Layer *layer)
 			 * we are premultiplying.
 			 */
 			for (i = 0; i < alpha_bands; i++)
-				v[i] = i == 0 && wtiff->premultiply
-					? EXTRASAMPLE_ASSOCALPHA
-					: EXTRASAMPLE_UNASSALPHA;
-			TIFFSetField(tif,
-				TIFFTAG_EXTRASAMPLES, alpha_bands, v);
+				v[i] = i == 0 && wtiff->premultiply ?
+					EXTRASAMPLE_ASSOCALPHA : EXTRASAMPLE_UNASSALPHA;
+			TIFFSetField(tif, TIFFTAG_EXTRASAMPLES, alpha_bands, v);
 		}
 
 		TIFFSetField(tif, TIFFTAG_PHOTOMETRIC, photometric);
@@ -1186,7 +1209,8 @@ wtiff_allocate_layers(Wtiff *wtiff)
 			vips__region_no_ownership(layer->copy);
 
 			layer->tif = vips__tiff_openout_target(layer->target,
-				wtiff->bigtiff);
+				wtiff->bigtiff, wtiff_handler_error,
+				wtiff_handler_warning, wtiff);
 			if (!layer->tif)
 				return -1;
 		}
@@ -2441,7 +2465,8 @@ wtiff_gather(Wtiff *wtiff)
 			if (!(source = vips_source_new_from_target(layer->target)))
 				return -1;
 
-			if (!(in = vips__tiff_openin_source(source, NULL))) {
+			if (!(in = vips__tiff_openin_source(source, NULL, wtiff_handler_error,
+				wtiff_handler_warning, NULL, FALSE))) {
 				VIPS_UNREF(source);
 				return -1;
 			}

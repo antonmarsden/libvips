@@ -243,10 +243,10 @@ thumbnail_write_file(VipsObject *process, VipsImage *im, const char *filename)
 	if ((p = strrchr(file, '.')))
 		*p = '\0';
 
-	/* Don't use vips_snprintf(), we only want to optionally substitute a
+	/* Don't use g_snprintf(), we only want to optionally substitute a
 	 * single %s.
 	 */
-	vips_strncpy(buf, output_format, FILENAME_MAX);
+	g_strlcpy(buf, output_format, FILENAME_MAX);
 	vips__substitute(buf, FILENAME_MAX, file);
 
 	/* output_format can be an absolute path, in which case we discard the
@@ -401,39 +401,39 @@ thumbnail_parse_geometry(const char *geometry)
 
 	/* Get the width.
 	 */
-	while (isspace(*p))
+	while (g_ascii_isspace(*p))
 		p++;
-	if (isdigit(*p)) {
+	if (g_ascii_isdigit(*p)) {
 		thumbnail_width = atoi(p);
 
-		while (isdigit(*p))
+		while (g_ascii_isdigit(*p))
 			p++;
 	}
 
 	/* Get the optional 'x'.
 	 */
-	while (isspace(*p))
+	while (g_ascii_isspace(*p))
 		p++;
 	had_x = FALSE;
 	if (*p == 'x') {
 		p += 1;
 		had_x = TRUE;
 	}
-	while (isspace(*p))
+	while (g_ascii_isspace(*p))
 		p++;
 
 	/* Get the height.
 	 */
-	if (isdigit(*p)) {
+	if (g_ascii_isdigit(*p)) {
 		thumbnail_height = atoi(p);
 
-		while (isdigit(*p))
+		while (g_ascii_isdigit(*p))
 			p++;
 	}
 
 	/* Get the final <>!
 	 */
-	while (isspace(*p))
+	while (g_ascii_isspace(*p))
 		p++;
 	if (*p == '<')
 		size_restriction = VIPS_SIZE_UP;

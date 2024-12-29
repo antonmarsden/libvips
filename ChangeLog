@@ -1,4 +1,26 @@
-master 8.16
+8.17.0
+
+- add `keep_duplicate_frames` option to GIF save [dloebl]
+- add Magic Kernel support [akimon658]
+- tiff: add threadsafe warning/error handlers (requires libtiff 4.5.0+) [lovell]
+- tiffload: add support for unlimited flag (requires libtiff 4.7.0+) [lovell]
+
+8.16.1
+
+- support multipage JXL
+- fix PFM byte order on big-endian machines [agoode]
+- morph: fix erode Highway path [kleisauke]
+- morph: fix C-paths with masks containing zero [kleisauke]
+- fix `--vips-info` CLI flag with GLib >= 2.80 [kleisauke]
+- make `subsample-mode=on` and `lossless=true` mutually exclusive [kleisauke]
+- fix SZI write with openslide4 [goran-hc]
+- heifsave: prevent use of AV1 intra block copy feature [lovell]
+- threadpool: improve cooperative downsizing [kleisauke]
+- fix alpha shift during colourspace conversions [frederikrosenberg]
+- heifsave: set image orientation using irot and imir transformations [lovell]
+- XYZ2Yxy: guard against divide by zero
+
+10/10/24 8.16.0
 
 - allow small offsets for the PDF magic string [project0]
 - add support for OJPEG tiffs [DarthSim]
@@ -12,23 +34,50 @@ master 8.16
 - add configurable max coordinate and vips_max_coord_get()
 - improve kill handling
 - PFM save and load now uses scRGB (ie. linear 0-1) [NiHoel]
-- turn `vips_addalpha` into a VipsOperation [RiskoZoSlovenska]
+- turn vips_addalpha() into a VipsOperation [RiskoZoSlovenska]
 - add vips_rawsave_target(), vips_rawsave_buffer() [akash-akya]
 - vipsheader supports multiple "-f field" arguments [sergeevabc]
-- webpsave has @target_size parameter to set desired size
-  in bytes [john-parton]
-- webpsave has @passes parameter to set number of passes to achieve
-  desired target_size [john-parton]
+- add "target_size" to webpsave [john-parton]
+- add "passes" to webpsave [john-parton]
 - revise sRGB -> B_W coefficients [daniellovera]
+- add vips_sdf(), vips_clamp(), vips_maxpair(), vips_minpair()
+- more const for the C++ API [Julianiolo]
+- deprecate "cache" (use tilecache instead)
+- add tests for tokenisation
+- add "unpack_complex" option to vips_getpoint()
+- add deflate compression level setting to tiffsave [ruven]
+- add "smart_deblock" to webpsave [goodusername123]
 
-8.15.3
+4/10/24 8.15.5
+
+- version bump, revise C++ soname
+
+3/10/24 8.15.4
+
+- fix an off-by-one error in vips__token_get()
+- heifsave: fix crash when passing an invalid bitdepth [kleisauke]
+- webpsave: fix memory leak on error [dloebl]
+- heifsave: ensure NCLX profile is freed in lossless mode [kleisauke]
+- threadpool: fix a race condition in error handling [kleisauke]
+- disable GLib cast checks and asserts for plain builds [kleisauke]
+- fix jpeg in tiff for high Q [nahilsobh]
+- threadset: fix a race condition during thread exit [kleisauke]
+- fix compatibility with MSVC [Julianiolo]
+
+11/8/24 8.15.3
 
 - fix dzsave of >8-bit images to JPEG
 - jpegsave: fix chrominance subsampling mode with jpegli [kleisauke]
 - pngload: disable ADLER32/CRC checking in non-fail mode [kleisauke]
 - improve target_clones support check [kleisauke]
 - fix pipe read limit
-- fix a rare crash on windows in highly threaded applications [Julianiolo]
+- fix a rare crash on Windows in highly threaded applications [Julianiolo]
+- vipssave: fix infinite loop on Windows with large images [pdbourke]
+- conva: fix a crash with {u,}{short,int} images [erdmann]
+- fix vips_image_get_string
+- heifsave: fix lossless mode [kleisauke]
+- composite: fix dest-atop blend mode [kleisauke]
+- fix vips_source_map for zero-length sources [kleisauke]
 
 12/3/24 8.15.2
 

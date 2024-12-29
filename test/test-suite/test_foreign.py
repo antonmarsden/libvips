@@ -8,7 +8,6 @@ import pytest
 import pyvips
 from helpers import *
 
-
 class TestForeign:
     tempdir = None
 
@@ -663,6 +662,15 @@ class TestForeign:
         assert x1.xres == 100
         assert x1.yres == 200
 
+        if sys.platform == "darwin":
+            with open(TIF2_FILE, 'rb') as f:
+                buf = bytearray(f.read())
+            buf = buf[:-4]
+            source = pyvips.Source.new_from_memory(buf)
+            im = pyvips.Image.tiffload_source(source, fail_on="warning")
+            with pytest.raises(Exception) as e_info:
+                im.avg() > 0
+
         # OME support in 8.5
         x = pyvips.Image.new_from_file(OME_FILE)
         assert x.width == 439
@@ -879,7 +887,7 @@ class TestForeign:
         im = pyvips.Image.new_from_file(WEBP_FILE)
         buf = im.webpsave_buffer(lossless=True)
         im2 = pyvips.Image.new_from_buffer(buf, "")
-        assert (im - im2).abs().max() < 1
+        assert (im - im2).abs().max() == 0
 
         # higher Q should mean a bigger buffer
         b1 = im.webpsave_buffer(Q=10)
@@ -1087,6 +1095,10 @@ class TestForeign:
 
         x2 = pyvips.Image.new_from_file(GIF_ANIM_FILE, page=1, n=-1)
         assert x2.height == 4 * x1.height
+
+        with pytest.raises(pyvips.error.Error):
+            x1 = pyvips.Image.new_from_file(GIF_ANIM_FILE_INVALID, n=-1)
+            x1.avg()
 
     @skip_if_no("gifload")
     def test_gifload_animation_dispose_background(self):
@@ -1423,9 +1435,6 @@ class TestForeign:
             im = pyvips.Image.heifload(AVIF_FILE_HUGE)
             assert im.avg() == 0.0
 
-        im = pyvips.Image.heifload(AVIF_FILE_HUGE, unlimited=True)
-        assert im.avg() == 0.0
-
     @skip_if_no("heifsave")
     def test_avifsave(self):
         self.save_load_buffer("heifsave_buffer", "heifload_buffer",
@@ -1433,15 +1442,11 @@ class TestForeign:
         self.save_load("%s.avif", self.colour)
 
     @skip_if_no("heifsave")
-    @pytest.mark.skip()
     def test_avifsave_lossless(self):
-        # this takes FOREVER
         im = pyvips.Image.new_from_file(AVIF_FILE)
-        buf = im.heifsave_buffer(lossless=True, compression="av1")
+        buf = im.heifsave_buffer(effort=0, lossless=True, compression="av1")
         im2 = pyvips.Image.new_from_buffer(buf, "")
-        # FIXME: needs matrix_coefficients=0 for true lossless, see:
-        # https://github.com/strukturag/libheif/pull/1039
-        assert (im - im2).abs().max() < 1
+        assert (im - im2).abs().max() == 0
 
     @skip_if_no("heifsave")
     def test_avifsave_Q(self):
@@ -1534,6 +1539,27 @@ class TestForeign:
 
         self.file_loader("jp2kload", JP2K_FILE, jp2k_valid)
         self.buffer_loader("jp2kload_buffer", JP2K_FILE, jp2k_valid)
+
+        # Bretagne2_4.j2k is a tiled jpeg2000 image with 127x127 pixel tiles,
+        # triggering tricky rounding issues
+        filename = os.path.join(IMAGES, "Bretagne2_4.j2k")
+        im4 = pyvips.Image.new_from_file(filename, page=4)
+        im3 = pyvips.Image.new_from_file(filename, page=3)
+        assert abs(im4.avg() - im3.avg()) < 0.2
+
+        # Bretagne2_1.j2k is an untiled jpeg2000 image with non-zero offset
+        filename = os.path.join(IMAGES, "Bretagne2_1.j2k")
+        im4 = pyvips.Image.new_from_file(filename, page=4)
+        im3 = pyvips.Image.new_from_file(filename, page=3)
+        assert abs(im4.avg() - im3.avg()) < 0.5
+
+        # this horrible thing has a header that doesn't match the decoded
+        # pixels ... although it's a valid jp2k image, we reject files of
+        # this type
+        filename = os.path.join(IMAGES, "issue412.jp2")
+        with pytest.raises(Exception) as e_info:
+            im = pyvips.Image.new_from_file(filename)
+            im.avg()
 
     @skip_if_no("jp2ksave")
     def test_jp2ksave(self):

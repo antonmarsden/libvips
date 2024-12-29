@@ -574,9 +574,9 @@ write_dzi(VipsForeignSaveDz *dz)
 	void *buf;
 	size_t len;
 
-	vips_snprintf(filename, VIPS_PATH_MAX, "%s.dzi", dz->imagename);
+	g_snprintf(filename, VIPS_PATH_MAX, "%s.dzi", dz->imagename);
 
-	vips_snprintf(format, VIPS_PATH_MAX, "%s", dz->suffix + 1);
+	g_snprintf(format, VIPS_PATH_MAX, "%s", dz->suffix + 1);
 	if ((p = (char *) vips__find_rightmost_brackets(format)))
 		*p = '\0';
 
@@ -970,7 +970,8 @@ write_associated_images(VipsImage *image,
 {
 	VipsForeignSaveDz *dz = (VipsForeignSaveDz *) a;
 
-	if (vips_isprefix("openslide.associated.", field)) {
+	if (vips_isprefix("openslide.associated.", field) &&
+		vips_image_get_typeof(image, field) == VIPS_TYPE_IMAGE) {
 		VipsImage *associated;
 		const char *p;
 		const char *q;
@@ -990,7 +991,7 @@ write_associated_images(VipsImage *image,
 		if (vips__archive_mkdir(dz->archive, "associated_images"))
 			return image;
 
-		vips_snprintf(buf, VIPS_PATH_MAX, "%s.jpg", p);
+		g_snprintf(buf, VIPS_PATH_MAX, "%s.jpg", p);
 
 		out = g_build_filename("associated_images", buf, NULL);
 
@@ -1154,8 +1155,8 @@ tile_name(Level *level, int x, int y)
 
 	switch (dz->layout) {
 	case VIPS_FOREIGN_DZ_LAYOUT_DZ:
-		vips_snprintf(subdir, VIPS_PATH_MAX, "%d", level->n);
-		vips_snprintf(name, VIPS_PATH_MAX, "%d_%d%s", x, y, dz->file_suffix);
+		g_snprintf(subdir, VIPS_PATH_MAX, "%d", level->n);
+		g_snprintf(name, VIPS_PATH_MAX, "%d_%d%s", x, y, dz->file_suffix);
 
 		break;
 
@@ -1176,8 +1177,8 @@ tile_name(Level *level, int x, int y)
 		 */
 		n += y * level->tiles_across + x;
 
-		vips_snprintf(subdir, VIPS_PATH_MAX, "TileGroup%d", n / 256);
-		vips_snprintf(name, VIPS_PATH_MAX,
+		g_snprintf(subdir, VIPS_PATH_MAX, "TileGroup%d", n / 256);
+		g_snprintf(name, VIPS_PATH_MAX,
 			"%d-%d-%d%s", level->n, x, y, dz->file_suffix);
 
 		/* Used at the end in ImageProperties.xml
@@ -1187,9 +1188,9 @@ tile_name(Level *level, int x, int y)
 		break;
 
 	case VIPS_FOREIGN_DZ_LAYOUT_GOOGLE:
-		vips_snprintf(subdir, VIPS_PATH_MAX,
+		g_snprintf(subdir, VIPS_PATH_MAX,
 			"%d" G_DIR_SEPARATOR_S "%d", level->n, y);
-		vips_snprintf(name, VIPS_PATH_MAX,
+		g_snprintf(name, VIPS_PATH_MAX,
 			"%d%s", x, dz->file_suffix);
 
 		break;
@@ -1222,7 +1223,7 @@ tile_name(Level *level, int x, int y)
 			int ysize = VIPS_MIN(dz->tile_size,
 				level->height - y * dz->tile_size);
 
-			vips_snprintf(subdir, VIPS_PATH_MAX,
+			g_snprintf(subdir, VIPS_PATH_MAX,
 				"%d,%d,%d,%d" G_DIR_SEPARATOR_S "%d,%d" G_DIR_SEPARATOR_S "%d",
 				left, top, width, height,
 				xsize, ysize,
@@ -1234,14 +1235,14 @@ tile_name(Level *level, int x, int y)
 			int size = VIPS_MIN(dz->tile_size,
 				level->width - x * dz->tile_size);
 
-			vips_snprintf(subdir, VIPS_PATH_MAX,
+			g_snprintf(subdir, VIPS_PATH_MAX,
 				"%d,%d,%d,%d" G_DIR_SEPARATOR_S "%d," G_DIR_SEPARATOR_S "%d",
 				left, top, width, height,
 				size,
 				rotation);
 		}
 
-		vips_snprintf(name, VIPS_PATH_MAX, "default%s", dz->file_suffix);
+		g_snprintf(name, VIPS_PATH_MAX, "default%s", dz->file_suffix);
 	}
 
 	break;
@@ -1955,7 +1956,7 @@ vips_foreign_save_dz_build(VipsObject *object)
 	 * or the deprecated "no_strip" turns this off.
 	 */
 	if (!vips_object_argument_isset(object, "keep") &&
-		!vips_object_argument_isset(object, "no_strip"))
+		!dz->no_strip)
 		save->keep = VIPS_FOREIGN_KEEP_NONE;
 
 	/* Google, zoomify and iiif default to zero overlap, ".jpg".

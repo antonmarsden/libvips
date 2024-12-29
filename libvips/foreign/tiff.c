@@ -59,6 +59,11 @@
 
 #include "tiff.h"
 
+#ifdef HAVE_TIFF_OPEN_OPTIONS
+void
+vips__tiff_init(void) {}
+#else
+
 static GMutex *vips_tiff_tag_extender_mutex = NULL;
 static TIFFExtendProc vips_tiff_prev_extend_proc = NULL;
 static VipsForeignTiffTags *vips_tiff_custom_tags = NULL;
@@ -102,6 +107,7 @@ vips__tiff_init(void)
 	TIFFSetWarningHandler(vips__thandler_warning);
 	vips_tiff_tag_extender_mutex = vips_g_mutex_new();
 }
+#endif /*HAVE_TIFF_OPEN_OPTIONS*/
 
 /* TIFF input from a vips source.
  */
@@ -170,7 +176,8 @@ openin_source_unmap(thandle_t st, tdata_t start, toff_t len)
 }
 
 TIFF *
-vips__tiff_openin_source(VipsSource *source, VipsForeignTiffTags *custom_tags)
+vips__tiff_openin_source(VipsSource *source, VipsForeignTiffTags *custom_tags, VipsTiffErrorHandler error_fn,
+	VipsTiffErrorHandler warning_fn, void *user_data, gboolean unlimited)
 {
 	TIFF *tiff;
 
@@ -194,6 +201,33 @@ vips__tiff_openin_source(VipsSource *source, VipsForeignTiffTags *custom_tags)
 	 * chopped into c. 8kb chunks. This can reduce peak memory use for
 	 * this type of file.
 	 */
+
+#ifdef HAVE_TIFF_OPEN_OPTIONS
+	TIFFOpenOptions *opts = TIFFOpenOptionsAlloc();
+	TIFFOpenOptionsSetErrorHandlerExtR(opts, error_fn, user_data);
+	TIFFOpenOptionsSetWarningHandlerExtR(opts, warning_fn, user_data);
+#ifdef HAVE_TIFF_OPEN_OPTIONS_SET_MAX_CUMULATED_MEM_ALLOC
+	if (!unlimited) {
+		TIFFOpenOptionsSetMaxCumulatedMemAlloc(opts, 20 * 1024 * 1024);
+	}
+#endif /*HAVE_TIFF_OPEN_OPTIONS_SET_MAX_CUMULATED_MEM_ALLOC*/
+	if (!(tiff = TIFFClientOpenExt("source input", "rmC",
+			  (thandle_t) source,
+			  openin_source_read,
+			  openin_source_write,
+			  openin_source_seek,
+			  openin_source_close,
+			  openin_source_length,
+			  openin_source_map,
+			  openin_source_unmap,
+			  opts))) {
+	    TIFFOpenOptionsFree(opts);
+		vips_error("vips__tiff_openin_source", "%s",
+			_("unable to open source for input"));
+		return NULL;
+	}
+	TIFFOpenOptionsFree(opts);
+#else
 	if (!(tiff = TIFFClientOpen("source input", "rmC",
 			  (thandle_t) source,
 			  openin_source_read,
@@ -210,6 +244,8 @@ vips__tiff_openin_source(VipsSource *source, VipsForeignTiffTags *custom_tags)
 		}
 		return NULL;
 	}
+#endif /*HAVE_TIFF_OPEN_OPTIONS*/
+
 	if (custom_tags != NULL) {
 		g_mutex_unlock(vips_tiff_tag_extender_mutex);
 	}
@@ -289,7 +325,9 @@ openout_target_unmap(thandle_t st, tdata_t start, toff_t len)
 }
 
 TIFF *
-vips__tiff_openout_target(VipsTarget *target, gboolean bigtiff)
+vips__tiff_openout_target(VipsTarget *target, gboolean bigtiff,
+	VipsTiffErrorHandler error_fn, VipsTiffErrorHandler warning_fn,
+	void *user_data)
 {
 	const char *mode = bigtiff ? "w8" : "w";
 
@@ -299,6 +337,27 @@ vips__tiff_openout_target(VipsTarget *target, gboolean bigtiff)
 	printf("vips__tiff_openout_buffer:\n");
 #endif /*DEBUG*/
 
+#ifdef HAVE_TIFF_OPEN_OPTIONS
+	TIFFOpenOptions *opts = TIFFOpenOptionsAlloc();
+	TIFFOpenOptionsSetErrorHandlerExtR(opts, error_fn, user_data);
+	TIFFOpenOptionsSetWarningHandlerExtR(opts, warning_fn, user_data);
+	if (!(tiff = TIFFClientOpenExt("target output", mode,
+			  (thandle_t) target,
+			  openout_target_read,
+			  openout_target_write,
+			  openout_target_seek,
+			  openout_target_close,
+			  openout_target_length,
+			  openout_target_map,
+			  openout_target_unmap,
+			  opts))) {
+		TIFFOpenOptionsFree(opts);
+		vips_error("vips__tiff_openout_target", "%s",
+			_("unable to open target for output"));
+		return NULL;
+	}
+	TIFFOpenOptionsFree(opts);
+#else
 	if (!(tiff = TIFFClientOpen("target output", mode,
 			  (thandle_t) target,
 			  openout_target_read,
@@ -312,6 +371,7 @@ vips__tiff_openout_target(VipsTarget *target, gboolean bigtiff)
 			_("unable to open target for output"));
 		return NULL;
 	}
+#endif /*HAVE_TIFF_OPEN_OPTIONS*/
 
 	return tiff;
 }

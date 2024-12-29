@@ -225,6 +225,12 @@ VipsArrayDouble_unref(VipsArrayDouble *array)
 	vips_area_unref(VIPS_AREA(array));
 }
 
+void
+VipsArrayImage_unref(VipsArrayImage *array)
+{
+	vips_area_unref(VIPS_AREA(array));
+}
+
 /**
  * vips_area_new:
  * @free_fn: (scope async) (nullable): @data will be freed with this function
@@ -415,7 +421,7 @@ transform_area_g_string(const GValue *src_value, GValue *dest_value)
 	char buf[256];
 
 	area = g_value_get_boxed(src_value);
-	vips_snprintf(buf, 256, "VIPS_TYPE_AREA, count = %d, data = %p",
+	g_snprintf(buf, 256, "VIPS_TYPE_AREA, count = %d, data = %p",
 		area->count, area->data);
 	g_value_set_string(dest_value, buf);
 }
@@ -739,7 +745,7 @@ transform_blob_g_string(const GValue *src_value, GValue *dest_value)
 	char buf[256];
 
 	blob = vips_value_get_blob(src_value, &length);
-	vips_snprintf(buf, 256, "VIPS_TYPE_BLOB, data = %p, length = %zd",
+	g_snprintf(buf, 256, "VIPS_TYPE_BLOB, data = %p, length = %zd",
 		blob, length);
 	g_value_set_string(dest_value, buf);
 }

@@ -287,25 +287,11 @@ void *vips_hash_table_map(GHashTable *hash,
 	VipsSListMap2Fn fn, void *a, void *b);
 
 VIPS_API
-char *vips_strncpy(char *dest, const char *src, int n);
-VIPS_API
-char *vips_strrstr(const char *haystack, const char *needle);
-VIPS_API
-gboolean vips_ispostfix(const char *a, const char *b);
-VIPS_API
 gboolean vips_iscasepostfix(const char *a, const char *b);
 VIPS_API
 gboolean vips_isprefix(const char *a, const char *b);
 VIPS_API
 char *vips_break_token(char *str, const char *brk);
-
-void vips__chomp(char *str);
-
-VIPS_API
-int vips_vsnprintf(char *str, size_t size, const char *format, va_list ap);
-VIPS_API
-int vips_snprintf(char *str, size_t size, const char *format, ...)
-	G_GNUC_PRINTF(3, 4);
 
 VIPS_API
 int vips_filename_suffix_match(const char *path, const char *suffixes[]);
@@ -338,8 +324,7 @@ int vips__file_write(void *data, size_t size, size_t nmemb, FILE *stream);
 /* TODO(kleisauke): VIPS_API is required by the magick module.
  */
 VIPS_API
-gint64 vips__get_bytes(const char *filename,
-	unsigned char buf[], gint64 len);
+gint64 vips__get_bytes(const char *filename, unsigned char buf[], gint64 len);
 int vips__fgetc(FILE *fp);
 
 GValue *vips__gvalue_ref_string_new(const char *text);
@@ -394,6 +379,8 @@ typedef enum {
 	VIPS_TOKEN_COMMA
 } VipsToken;
 
+// we expose this one in the API for testing
+VIPS_API
 const char *vips__token_get(const char *buffer,
 	VipsToken *token, char *string, int size);
 const char *vips__token_must(const char *buffer, VipsToken *token,

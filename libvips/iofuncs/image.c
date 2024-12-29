@@ -66,6 +66,7 @@
 #endif /*HAVE_UNISTD_H*/
 #include <ctype.h>
 
+#define VIPS_DISABLE_DEPRECATION_WARNINGS
 #include <vips/vips.h>
 #include <vips/internal.h>
 #include <vips/debug.h>
@@ -1703,7 +1704,7 @@ vips_image_temp_name(char *name, int size)
 
 	int serial = g_atomic_int_add(&global_serial, 1);
 
-	vips_snprintf(name, size, "temp-%d", serial);
+	g_snprintf(name, size, "temp-%d", serial);
 }
 
 /**
@@ -3201,7 +3202,7 @@ vips_image_write_prepare(VipsImage *image)
 int
 vips_image_write_line(VipsImage *image, int ypos, VipsPel *linebuffer)
 {
-	int linesize = VIPS_IMAGE_SIZEOF_LINE(image);
+	guint64 linesize = VIPS_IMAGE_SIZEOF_LINE(image);
 
 	/* Is this the start of eval?
 	 */
@@ -3222,8 +3223,7 @@ vips_image_write_line(VipsImage *image, int ypos, VipsPel *linebuffer)
 	switch (image->dtype) {
 	case VIPS_IMAGE_SETBUF:
 	case VIPS_IMAGE_SETBUF_FOREIGN:
-		memcpy(VIPS_IMAGE_ADDR(image, 0, ypos),
-			linebuffer, linesize);
+		memcpy(VIPS_IMAGE_ADDR(image, 0, ypos), linebuffer, linesize);
 		break;
 
 	case VIPS_IMAGE_OPENOUT:
@@ -3234,10 +3234,8 @@ vips_image_write_line(VipsImage *image, int ypos, VipsPel *linebuffer)
 		break;
 
 	default:
-		vips_error("VipsImage",
-			_("unable to output to a %s image"),
-			vips_enum_string(VIPS_TYPE_IMAGE_TYPE,
-				image->dtype));
+		vips_error("VipsImage", _("unable to output to a %s image"),
+			vips_enum_string(VIPS_TYPE_IMAGE_TYPE, image->dtype));
 		return -1;
 	}
 
