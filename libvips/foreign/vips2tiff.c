@@ -1108,6 +1108,53 @@ wtiff_write_header(Wtiff *wtiff, Layer *layer)
 	}
 #endif /*HAVE_JPEG*/
 
+	if (vips_image_get_typeof(wtiff->ready, VIPS_META_CUSTOM_TIFF_TAGS)) {
+		const VipsForeignTiffTags *custom_tags;
+		size_t customTagLength = 0;
+		vips_image_get_blob(wtiff->ready, VIPS_META_CUSTOM_TIFF_TAGS, (const void **) &custom_tags, &customTagLength);
+		TIFFMergeFieldInfo(tif, custom_tags->tags, custom_tags->len);
+		printf("writer custom tag count: %d\n", custom_tags->len);
+		const TIFFFieldInfo *tag = custom_tags->tags;
+		for (size_t i = 0; i < custom_tags->len; i++) {
+			printf("write %d: %s\n", tag->field_tag, tag->field_name);
+			const void *data;
+			size_t data_len;
+			switch (tag->field_type) {
+			case TIFF_SHORT:
+				if (vips_image_get_typeof(wtiff->ready, tag->field_name)) {
+					vips_image_get_blob(wtiff->ready, tag->field_name, &data, &data_len);
+					TIFFSetField(tif, tag->field_tag, data_len / 2, data);
+				}
+				printf("write short\n");
+				break;
+			case TIFF_ASCII:
+				if (vips_image_get_typeof(wtiff->ready, tag->field_name)) {
+					vips_image_get_blob(wtiff->ready, tag->field_name, &data, &data_len);
+					TIFFSetField(tif, tag->field_tag, data);
+				}
+				printf("write ascii\n");
+				break;
+			case TIFF_DOUBLE:
+				if (vips_image_get_typeof(wtiff->ready, tag->field_name)) {
+					vips_image_get_blob(wtiff->ready, tag->field_name, &data, &data_len);
+					TIFFSetField(tif, tag->field_tag, data_len / 8, data);
+				}
+				printf("write double\n");
+				break;
+			default:
+				printf("unsupported type: %d\n", tag->field_type);
+				break;
+			}
+			//			if (TIFFGetField(rtiff->tiff, tag->field_tag, &data_len, &data)) {
+			//				vips_image_set_blob_copy(out, tag->field_name, data, data_len);
+			//			}
+			tag++;
+		}
+
+	} else {
+		printf("Custom tags is NULL on write_header call");
+	}
+
 	return 0;
 }
 
@@ -2418,7 +2465,7 @@ wtiff_gather(Wtiff *wtiff)
 			if (!(source = vips_source_new_from_target(layer->target)))
 				return -1;
 
-			if (!(in = vips__tiff_openin_source(source, wtiff_handler_error,
+			if (!(in = vips__tiff_openin_source(source, NULL, wtiff_handler_error,
 				wtiff_handler_warning, NULL, FALSE))) {
 				VIPS_UNREF(source);
 				return -1;

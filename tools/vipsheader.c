@@ -82,9 +82,40 @@
 #include <vips/internal.h>
 #include <vips/debug.h>
 
+#include <vips/foreign.h>
+#include <tiffio.h>
+
 static GSList *main_option_fields = NULL;
 static gboolean main_option_all = FALSE;
 static gboolean version = FALSE;
+
+#define TIFFTAG_GEOPIXELSCALE       33550
+#define TIFFTAG_GEOTIEPOINTS         33922
+#define TIFFTAG_GEOTRANSMATRIX       34264
+#define TIFFTAG_GEOKEYDIRECTORY      34735
+#define TIFFTAG_GEODOUBLEPARAMS      34736
+#define TIFFTAG_GEOASCIIPARAMS       34737
+
+static const TIFFFieldInfo xtiffFieldInfo[] = {
+    /* XXX Insert Your tags here */
+    { TIFFTAG_GEOPIXELSCALE,        -1,-1, TIFF_DOUBLE,     FIELD_CUSTOM,
+      TRUE, TRUE,   "GeoPixelScale" },
+    { TIFFTAG_GEOTRANSMATRIX,       -1,-1, TIFF_DOUBLE,     FIELD_CUSTOM,
+      TRUE, TRUE,   "GeoTransformationMatrix" },
+    { TIFFTAG_GEOTIEPOINTS, -1,-1, TIFF_DOUBLE,     FIELD_CUSTOM,
+      TRUE, TRUE,   "GeoTiePoints" },
+    { TIFFTAG_GEOKEYDIRECTORY, -1,-1, TIFF_SHORT,   FIELD_CUSTOM,
+      TRUE, TRUE,   "GeoKeyDirectory" },
+    { TIFFTAG_GEODOUBLEPARAMS,      -1,-1, TIFF_DOUBLE,     FIELD_CUSTOM,
+      TRUE, TRUE,   "GeoDoubleParams" },
+    { TIFFTAG_GEOASCIIPARAMS,       -1,-1, TIFF_ASCII,      FIELD_CUSTOM,
+      TRUE, FALSE,  "GeoASCIIParams" }
+};
+
+static const VipsForeignTiffTags customTiffTags = {
+	tags: xtiffFieldInfo,
+	len: sizeof(xtiffFieldInfo) / sizeof(xtiffFieldInfo[0])
+};
 
 static gboolean
 main_option_field(const gchar *option_name, const gchar *value,
@@ -169,7 +200,7 @@ print_field_fn(VipsImage *image, const char *field, GValue *value, void *a)
 /* Print header, or parts of header.
  */
 static int
-print_header(VipsImage *image, gboolean many)
+print_header(VipsImage *image, gboolean many, const VipsForeignTiffTags *customTags)
 {
 	if (main_option_fields)
 		vips_slist_map2(main_option_fields, dump_field, image, NULL);
@@ -263,12 +294,12 @@ main(int argc, char *argv[])
 			VIPS_UNREF(source);
 		}
 		else {
-			if (!(image = vips_image_new_from_file(argv[i], NULL)))
+			if (!(image = vips_image_new_from_file(argv[i], "customTags", &customTiffTags, NULL)))
 				result = 1;
 		}
 
 		if (image &&
-			print_header(image, argv[2] != NULL))
+			print_header(image, argv[2] != NULL, &customTiffTags))
 			result = 1;
 
 		VIPS_UNREF(image);

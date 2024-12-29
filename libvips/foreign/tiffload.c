@@ -81,6 +81,8 @@ typedef struct _VipsForeignLoadTiff {
 	 */
 	gboolean unlimited;
 
+	VipsForeignTiffTags *custom_tags;
+
 } VipsForeignLoadTiff;
 
 typedef VipsForeignLoadClass VipsForeignLoadTiffClass;
@@ -140,7 +142,7 @@ vips_foreign_load_tiff_header(VipsForeignLoad *load)
 	VipsForeignLoadTiff *tiff = (VipsForeignLoadTiff *) load;
 
 	if (vips__tiff_read_header_source(tiff->source, load->out,
-			tiff->page, tiff->n, tiff->autorotate, tiff->subifd,
+			tiff->page, tiff->n, tiff->autorotate, tiff->subifd, tiff->custom_tags,
 			load->fail_on, tiff->unlimited))
 		return -1;
 
@@ -153,7 +155,7 @@ vips_foreign_load_tiff_load(VipsForeignLoad *load)
 	VipsForeignLoadTiff *tiff = (VipsForeignLoadTiff *) load;
 
 	if (vips__tiff_read_source(tiff->source, load->real,
-			tiff->page, tiff->n, tiff->autorotate, tiff->subifd,
+			tiff->page, tiff->n, tiff->autorotate, tiff->subifd, tiff->custom_tags,
 			load->fail_on, tiff->unlimited))
 		return -1;
 
@@ -220,14 +222,21 @@ vips_foreign_load_tiff_class_init(VipsForeignLoadTiffClass *class)
 		G_STRUCT_OFFSET(VipsForeignLoadTiff, subifd),
 		-1, 100000, -1);
 
+	VIPS_ARG_POINTER(class, "custom_tags", 24,
+		_("custom_tags"),
+		_("Custom TIFF tags"),
+		VIPS_ARGUMENT_OPTIONAL_INPUT,
+		G_STRUCT_OFFSET(VipsForeignLoadTiff, custom_tags));
+
 #ifndef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
-	VIPS_ARG_BOOL(class, "unlimited", 24,
+	VIPS_ARG_BOOL(class, "unlimited", 25,
 		_("Unlimited"),
 		_("Remove all denial of service limits"),
 		VIPS_ARGUMENT_OPTIONAL_INPUT,
 		G_STRUCT_OFFSET(VipsForeignLoadTiff, unlimited),
 		FALSE);
 #endif
+
 }
 
 static void
@@ -236,6 +245,7 @@ vips_foreign_load_tiff_init(VipsForeignLoadTiff *tiff)
 	tiff->page = 0;
 	tiff->n = 1;
 	tiff->subifd = -1;
+	tiff->custom_tags = NULL;
 	tiff->unlimited = FALSE;
 }
 

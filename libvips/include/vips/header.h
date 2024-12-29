@@ -178,6 +178,14 @@ extern "C" {
  */
 #define VIPS_META_CONCURRENCY "concurrency"
 
+/**
+ * VIPS_META_CUSTOM_TIFF_TAGS:
+ *
+ * If set, the suggested concurrency for this image.
+ */
+#define VIPS_META_CUSTOM_TIFF_TAGS "custom-tiff-tags"
+
+
 VIPS_API
 guint64 vips_format_sizeof(VipsBandFormat format);
 VIPS_API

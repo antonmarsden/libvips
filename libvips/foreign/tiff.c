@@ -64,6 +64,18 @@ void
 vips__tiff_init(void) {}
 #else
 
+static GMutex *vips_tiff_tag_extender_mutex = NULL;
+static TIFFExtendProc vips_tiff_prev_extend_proc = NULL;
+static VipsForeignTiffTags *vips_tiff_custom_tags = NULL;
+
+static void vips_tiff_merge_custom_tags(TIFF *tiff) {
+	if (vips_tiff_custom_tags != NULL) {
+		TIFFMergeFieldInfo(tiff, vips_tiff_custom_tags->tags, vips_tiff_custom_tags->len);
+	}
+	TIFFSetTagExtender(vips_tiff_prev_extend_proc);
+	vips_tiff_prev_extend_proc = NULL;
+}
+
 /* Handle TIFF errors here. Shared with vips2tiff.c. These can be called from
  * more than one thread.
  */
@@ -93,6 +105,7 @@ vips__tiff_init(void)
 {
 	TIFFSetErrorHandler(vips__thandler_error);
 	TIFFSetWarningHandler(vips__thandler_warning);
+	vips_tiff_tag_extender_mutex = vips_g_mutex_new();
 }
 #endif /*HAVE_TIFF_OPEN_OPTIONS*/
 
@@ -163,7 +176,7 @@ openin_source_unmap(thandle_t st, tdata_t start, toff_t len)
 }
 
 TIFF *
-vips__tiff_openin_source(VipsSource *source, VipsTiffErrorHandler error_fn,
+vips__tiff_openin_source(VipsSource *source, VipsForeignTiffTags *custom_tags, VipsTiffErrorHandler error_fn,
 	VipsTiffErrorHandler warning_fn, void *user_data, gboolean unlimited)
 {
 	TIFF *tiff;
@@ -174,6 +187,12 @@ vips__tiff_openin_source(VipsSource *source, VipsTiffErrorHandler error_fn,
 
 	if (vips_source_rewind(source))
 		return NULL;
+
+	if (custom_tags != NULL) {
+		g_mutex_lock(vips_tiff_tag_extender_mutex);
+		vips_tiff_custom_tags = custom_tags;
+		vips_tiff_prev_extend_proc = TIFFSetTagExtender(vips_tiff_merge_custom_tags);
+	}
 
 	/* Disable memory mapped input -- it chews up VM and the performance
 	 * gain is very small.
@@ -220,9 +239,16 @@ vips__tiff_openin_source(VipsSource *source, VipsTiffErrorHandler error_fn,
 			  openin_source_unmap))) {
 		vips_error("vips__tiff_openin_source", "%s",
 			_("unable to open source for input"));
+		if (custom_tags != NULL) {
+			g_mutex_unlock(vips_tiff_tag_extender_mutex);
+		}
 		return NULL;
 	}
 #endif /*HAVE_TIFF_OPEN_OPTIONS*/
+
+	if (custom_tags != NULL) {
+		g_mutex_unlock(vips_tiff_tag_extender_mutex);
+	}
 
 	/* Unreffed on close(), see above.
 	 */

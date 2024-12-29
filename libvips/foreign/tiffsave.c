@@ -113,7 +113,6 @@ typedef struct _VipsForeignSaveTiff {
 	VipsForeignDzDepth depth;
 	gboolean subifd;
 	gboolean premultiply;
-
 } VipsForeignSaveTiff;
 
 typedef VipsForeignSaveClass VipsForeignSaveTiffClass;
@@ -223,7 +222,8 @@ vips_foreign_save_tiff_build(VipsObject *object)
 			tiff->depth,
 			tiff->subifd,
 			tiff->premultiply,
-			save->page_height))
+			save->page_height
+			))
 		return -1;
 
 	if (vips_target_end(tiff->target))

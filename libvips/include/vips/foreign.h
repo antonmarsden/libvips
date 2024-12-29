@@ -605,6 +605,13 @@ typedef enum {
 	VIPS_FOREIGN_TIFF_RESUNIT_LAST
 } VipsForeignTiffResunit;
 
+
+
+typedef struct _VipsForeignTiffTags {
+	const void *tags;
+	const int len;
+} VipsForeignTiffTags;
+
 VIPS_API
 int vips_tiffload(const char *filename, VipsImage **out, ...)
 	G_GNUC_NULL_TERMINATED;
