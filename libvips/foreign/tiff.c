@@ -224,6 +224,9 @@ vips__tiff_openin_source(VipsSource *source, VipsForeignTiffTags *custom_tags, V
 	    TIFFOpenOptionsFree(opts);
 		vips_error("vips__tiff_openin_source", "%s",
 			_("unable to open source for input"));
+		if (custom_tags != NULL) {
+			g_mutex_unlock(vips_tiff_tag_extender_mutex);
+		}
 		return NULL;
 	}
 	TIFFOpenOptionsFree(opts);
