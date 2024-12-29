@@ -20,8 +20,8 @@ jobs:
             os: ubuntu-24.04
             build: { cc: clang-18, cxx: clang++-18, linker: ld.lld-18, sanitize: true }
 
-          - name: "macOS (13.6) - Xcode 15.2"
-            os: macos-13
+          - name: "macOS arm64 (14) - Xcode 15"
+            os: macos-14
             build: { cc: clang, cxx: clang++, linker: ld.lld }
 
     env:
@@ -53,7 +53,7 @@ jobs:
       - name: Install macOS dependencies
         if: runner.os == 'macOS'
         run: |
-          pip3 install meson
+          pip3 install meson --break-system-packages
           brew install \
             ninja pkg-config \
             cfitsio cgif fftw fontconfig glib \
@@ -91,10 +91,6 @@ jobs:
           echo "UBSAN_OPTIONS=suppressions=${{ github.workspace }}/suppressions/ubsan.supp:halt_on_error=1:abort_on_error=1:print_stacktrace=1" >> $GITHUB_ENV
           echo "LD_LIBRARY_PATH=$LLVM_PREFIX/lib:`dirname $ASAN_DSO`" >> $GITHUB_ENV
           echo "$LLVM_PREFIX/bin" >> $GITHUB_PATH
-          # Workaround for https://github.com/google/sanitizers/issues/89
-          # otherwise libIlmImf-2_3.so ends up as <unknown module>.
-          echo "DLCLOSE_PRELOAD=${{ github.workspace }}/dlclose.so" >> $GITHUB_ENV
-          echo -e '#include <stdio.h>\nint dlclose(void*handle){return 0;}' | $CC -shared -xc -odlclose.so -
 
       - name: Configure libvips
         run: |
@@ -124,5 +120,5 @@ jobs:
       - name: Run test suite
         env:
           VIPS_LEAK: 1
-          LD_PRELOAD: ${{ env.ASAN_DSO }} ${{ env.DLCLOSE_PRELOAD }}
+          LD_PRELOAD: ${{ env.ASAN_DSO }}
         run: python3 -m pytest -sv --log-cli-level=WARNING test/test-suite
